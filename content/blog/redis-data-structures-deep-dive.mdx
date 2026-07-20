@@ -1,0 +1,680 @@
+---
+title: "Redis 자료구조 완벽 가이드: String부터 Stream까지, 어떤 구조를 선택할까?"
+date: "2026-07-20"
+lastModified: "2026-07-20"
+section: "기술 노트"
+category: "Redis / Data Structures"
+tags: ["Redis", "Data Structures", "Spring Boot", "Performance", "Database"]
+cover: "/images/blog/redis-logo.png"
+coverAlt: "Redis 공식 로고"
+coverFit: "contain"
+description: "Redis의 String, Hash, List, Set, Sorted Set, Stream과 Bitmap·HyperLogLog·Geospatial·JSON을 명령어, 시간복잡도, 메모리, 실무 선택 기준으로 정리합니다."
+---
+
+Redis를 처음 접하면 “빠른 Key-Value 저장소”라고 배우기 쉽습니다. 하지만 Redis의 핵심은 단순히 문자열을 저장하는 데 있지 않습니다. 하나의 키에 어떤 자료구조를 연결하느냐에 따라 멤버십 검사, 순위 조회, 큐 처리, 이벤트 재처리, 부분 업데이트의 방식이 달라집니다.
+
+결론부터 말하면, Redis 자료구조는 저장할 데이터의 모양보다 **가장 자주 수행할 조회와 변경 연산**을 기준으로 선택해야 합니다. 하나의 값이면 String, 필드 단위의 레코드면 Hash, 중복 없는 집합이면 Set, 점수나 시간순 조회가 필요하면 Sorted Set, 소비자별 처리 상태와 재처리가 필요하면 Stream을 우선 검토합니다.
+
+이 글에서는 Redis의 기본 자료구조를 명령어 예제와 함께 살펴보고, 시간복잡도·메모리·TTL·동시성까지 고려해 실제 서비스에서 어떤 구조를 선택해야 하는지 정리합니다. 설명은 [Redis 공식 자료구조 문서](https://redis.io/docs/latest/develop/data-types/)와 [자료구조 비교 가이드](https://redis.io/docs/latest/develop/data-types/compare-data-types/)를 기준으로 작성했습니다.
+
+## 이 글에서 다루는 범위
+
+Redis 공식 문서에는 일반 자료구조 외에도 Bitmap, Geospatial, Probabilistic 자료구조, Time Series, Vector Sets 등이 소개되어 있습니다. 이 글에서는 애플리케이션 개발에서 자주 직접 선택하는 구조를 중심으로 설명하고, 특수한 문제에 적합한 구조는 후반부에서 간단히 비교합니다.
+
+| 범위 | 자료구조 | 핵심 질문 |
+| --- | --- | --- |
+| 기본 | String | 값 하나, 카운터, 캐시를 저장하는가? |
+| 기본 | Hash | 하나의 객체를 필드 단위로 읽고 수정하는가? |
+| 컬렉션 | List | 삽입 순서가 있는 큐나 스택이 필요한가? |
+| 컬렉션 | Set | 중복 없이 포함 여부와 집합 연산이 필요한가? |
+| 컬렉션 | Sorted Set | 점수·시간·우선순위로 정렬해서 범위를 읽는가? |
+| 이벤트 | Stream | 이벤트를 쌓고 여러 소비자가 처리하며 재처리해야 하는가? |
+| 특수 | Bitmap, HyperLogLog, Geospatial, JSON | 특정 문제를 메모리 효율적으로 근사하거나 질의하는가? |
+
+## Redis 자료구조를 고르는 첫 번째 기준은 무엇인가요?
+
+가장 먼저 “어떤 데이터를 저장할까?”보다 “어떤 명령을 가장 많이 실행할까?”를 질문해야 합니다. 같은 사용자 목록도 단순 포함 여부만 확인하면 Set이 적합하지만, 점수·선택 순서·시간순으로 읽어야 하면 Sorted Set이 더 적합합니다.
+
+| 필요한 동작 | 먼저 검토할 자료구조 | 대표 명령 |
+| --- | --- | --- |
+| 문자열, JSON 텍스트, 카운터, 플래그 저장 | String | `GET`, `SET`, `INCRBY`, `MGET` |
+| 객체의 일부 필드만 읽고 수정 | Hash | `HGET`, `HSET`, `HMGET`, `HINCRBY` |
+| 앞·뒤에서 넣고 빼는 순서형 작업 | List | `LPUSH`, `RPUSH`, `LPOP`, `BLPOP` |
+| 중복 제거와 포함 여부 검사 | Set | `SADD`, `SISMEMBER`, `SINTER` |
+| 점수·시간·순위 기반 정렬과 페이지 조회 | Sorted Set | `ZADD`, `ZRANGE`, `ZRANGEBYSCORE` |
+| 이벤트 로그, 소비자 그룹, ACK와 재처리 | Stream | `XADD`, `XREADGROUP`, `XACK` |
+| 정수 ID별 0/1 상태 | Bitmap | `SETBIT`, `GETBIT`, `BITCOUNT` |
+| 대규모 고유 개수의 근사치 | HyperLogLog | `PFADD`, `PFCOUNT` |
+| 위치와 반경·거리 조회 | Geospatial | `GEOADD`, `GEOSEARCH` |
+| 중첩 객체와 경로 단위 수정 | Redis JSON | `JSON.SET`, `JSON.GET` |
+
+이 표는 자료구조의 모든 기능을 대신하지 않습니다. 예를 들어 String만으로도 JSON을 저장할 수 있지만, 내부 필드를 자주 수정해야 한다면 Hash나 Redis JSON이 더 자연스러운 모델이 될 수 있습니다. Redis 공식 비교 문서도 자료구조마다 성능·메모리·기능의 교환 관계가 있다고 설명합니다.
+
+<figure className="not-prose">
+  <img
+    src="/images/blog/redis-data-structure-map.webp"
+    alt="Redis의 중심 데이터 코어에서 String, Hash, List, Set, Sorted Set, Stream 형태로 갈라지는 자료구조 개념도"
+    loading="lazy"
+    decoding="async"
+    className="h-auto w-full rounded-2xl border border-card-border bg-foreground/5"
+  />
+  <figcaption>Redis 자료구조는 데이터의 모양보다 필요한 조회·변경 연산에 따라 선택합니다. 본문 개념을 보조하기 위해 생성한 도식입니다.</figcaption>
+</figure>
+
+## Redis의 기본 모델: 하나의 키에는 하나의 자료구조가 연결됩니다
+
+Redis에서 데이터는 키와 값의 관계로 저장됩니다. 여기서 값은 단순 문자열만을 의미하지 않습니다. String, Hash, List, Set, Sorted Set, Stream 같은 Redis의 자료구조 인스턴스가 키에 연결됩니다.
+
+```text
+user:42                  -> Hash
+queue:email              -> List
+article:popular          -> Sorted Set
+notification:events      -> Stream
+feature:enabled:users    -> Set 또는 Bitmap
+```
+
+키가 어떤 타입인지 확인할 때는 `TYPE`을 사용합니다.
+
+```redis
+TYPE user:42
+TYPE article:popular
+```
+
+이미 Hash로 생성된 키에 String 명령을 실행하는 것처럼 자료구조와 맞지 않는 명령을 실행하면 `WRONGTYPE` 오류가 발생합니다. 따라서 키 이름만 정하는 것이 아니라 **키의 소유 자료구조와 허용되는 명령 집합**도 함께 설계해야 합니다.
+
+또한 대부분의 자료구조에서 만료 시간은 키 단위로 적용됩니다.
+
+```redis
+SET session:abc123 "user:42" EX 1800
+EXPIRE user:42 3600
+TTL session:abc123
+```
+
+필드 하나만 만료시키고 싶은데 Hash 전체의 수명과 다르다면, 필드별 키를 별도로 만들거나 자료구조·Redis 버전에서 제공하는 필드 만료 기능을 확인해야 합니다. “Hash 안의 모든 필드에 독립적인 TTL이 자동으로 붙는다”고 가정하면 안 됩니다.
+
+## 1. String: 가장 단순하지만 가장 넓게 사용되는 자료구조
+
+String은 Redis에서 가장 기본적인 자료구조입니다. 문자열뿐 아니라 바이너리 데이터, 숫자처럼 다룰 수 있는 값, 비트 연산의 기반으로도 사용할 수 있습니다. [Redis Strings 공식 문서](https://redis.io/docs/latest/develop/data-types/strings/)는 String을 애플리케이션이 내부 구조를 직접 관리하는 데이터 덩어리로 설명합니다.
+
+### 어떤 상황에 사용하나요?
+
+- 짧은 문자열이나 토큰을 저장할 때
+- 캐시 값을 저장할 때
+- 원자적인 카운터가 필요할 때
+- 간단한 Boolean 플래그를 저장할 때
+- JSON 문자열 전체를 한 번에 저장하고 읽을 때
+
+```redis
+SET cache:article:42 "{\"title\":\"Redis 자료구조\"}" EX 300
+GET cache:article:42
+```
+
+캐시에서는 `SET`과 만료 시간을 하나의 명령으로 함께 지정하는 편이 안전합니다. 값을 저장한 뒤 별도의 `EXPIRE`를 호출하면 두 명령 사이에 장애가 발생했을 때 만료 시간이 설정되지 않은 키가 남을 수 있습니다.
+
+### String에서 자주 사용하는 명령
+
+```redis
+SET counter:visits 0
+INCR counter:visits
+INCRBY counter:visits 10
+GET counter:visits
+
+MSET feature:a on feature:b off
+MGET feature:a feature:b
+```
+
+`INCR`와 `INCRBY`는 애플리케이션에서 값을 읽고 더한 뒤 다시 저장하는 방식보다 안전한 카운터 연산을 제공합니다. 여러 요청이 동시에 들어오는 카운터에서 다음과 같은 코드는 경쟁 조건이 생길 수 있습니다.
+
+```text
+GET counter
+애플리케이션에서 +1
+SET counter
+```
+
+이 경우에는 가능한 한 `INCRBY`처럼 서버가 제공하는 원자적 명령을 우선 검토합니다.
+
+### String에 JSON을 저장하면 안 되나요?
+
+저장할 수 있습니다. 객체 전체를 캐시하고 항상 통째로 읽는다면 JSON String은 단순하고 효율적인 선택입니다.
+
+```redis
+SET product:42 "{\"name\":\"keyboard\",\"stock\":12}" EX 60
+```
+
+하지만 `stock`만 바뀌었는데 JSON 전체를 매번 직렬화하고 저장해야 한다면 다음 문제가 생깁니다.
+
+1. 작은 필드 변경에도 전체 값을 읽고 파싱해야 합니다.
+2. 여러 요청이 서로 다른 필드를 수정하면 마지막 저장이 앞선 변경을 덮어쓸 수 있습니다.
+3. Redis 내부에서 JSON 경로를 기준으로 부분 조회하기 어렵습니다.
+
+필드 단위 갱신이 중요하면 Hash, 중첩 경로·배열·문서 질의가 필요하면 Redis JSON을 검토합니다.
+
+## 2. Hash: 하나의 객체를 필드-값 쌍으로 관리하기
+
+Hash는 하나의 Redis 키 안에 여러 개의 field-value 쌍을 저장하는 자료구조입니다. 애플리케이션의 객체나 레코드를 필드 단위로 관리할 때 자연스럽습니다. Redis 공식 문서도 Hash를 Java의 `HashMap`, Python의 dictionary와 비슷한 레코드형 구조로 소개합니다. [Redis Hashes 공식 문서](https://redis.io/docs/latest/develop/data-types/hashes/)
+
+```redis
+HSET user:42 \
+  name "Kim Junha" \
+  role "developer" \
+  loginCount 3
+
+HGET user:42 name
+HMGET user:42 name role loginCount
+HINCRBY user:42 loginCount 1
+```
+
+### Hash의 장점
+
+Hash의 핵심 장점은 객체의 일부 필드만 읽거나 수정할 수 있다는 점입니다.
+
+```redis
+HSET order:1001 status "PAID"
+HGET order:1001 status
+```
+
+주문 객체 전체를 다시 직렬화하지 않고 상태만 바꿀 수 있습니다. 사용자 프로필, 세션 메타데이터, 작업 상태, 간단한 도메인 객체처럼 필드 구조가 비교적 평평한 데이터에 잘 맞습니다.
+
+### Hash를 사용할 때 주의할 점
+
+#### `HGETALL`은 데이터 크기에 비례합니다
+
+```redis
+HGETALL user:42
+```
+
+필드가 몇 개뿐인 객체에는 편리하지만, 하나의 Hash에 너무 많은 필드를 넣은 뒤 `HGETALL`을 호출하면 한 번의 요청이 큰 응답을 만들 수 있습니다. 대규모 객체에서는 필요한 필드만 `HMGET`으로 읽거나, 애초에 도메인 단위로 Hash를 나누는 편이 안전합니다.
+
+#### Hash는 관계형 데이터베이스가 아닙니다
+
+Hash는 필드 저장과 수정에 적합하지만, 조건 검색·복합 인덱스·조인·강한 정합성을 자동으로 제공하지 않습니다. “모든 사용자 중 role이 manager인 사용자 찾기” 같은 질의를 Hash 전체를 순회하면서 해결하려고 하면 자료구조 선택이 잘못되었을 가능성이 큽니다.
+
+이런 경우에는 별도의 Set이나 Sorted Set 인덱스를 함께 두거나, 검색이 중요한 데이터는 데이터베이스·Redis Search 등 목적에 맞는 기능을 검토해야 합니다.
+
+### Hash와 Redis JSON의 선택 기준
+
+| 기준 | Hash | Redis JSON |
+| --- | --- | --- |
+| 데이터 모양 | 평평한 필드-값 쌍 | 중첩 객체·배열·문서 |
+| 부분 수정 | 필드 단위로 간단함 | JSON 경로 단위로 가능 |
+| 직렬화 | 애플리케이션에서 필드별 처리 | JSON 문서 모델 사용 |
+| 적합한 예 | 사용자 상태, 카운터 묶음 | 중첩 상품 문서, 설정 문서 |
+| 주의점 | 중첩 구조 표현이 불편함 | 기능·메모리·배포 환경 확인 필요 |
+
+## 3. List: 삽입 순서를 가진 큐·스택·덱
+
+List는 문자열 값들의 순서를 유지하는 자료구조입니다. 양쪽 끝에서 빠르게 값을 추가하거나 제거할 수 있기 때문에 큐, 스택, 간단한 작업 목록에 적합합니다. [Redis Lists 공식 문서](https://redis.io/docs/latest/develop/data-types/lists/)
+
+### 큐로 사용하기
+
+```redis
+RPUSH queue:email job:1001
+RPUSH queue:email job:1002
+
+BLPOP queue:email 0
+```
+
+생산자는 오른쪽 끝에 `RPUSH`하고, 소비자는 왼쪽에서 `BLPOP`하는 방식입니다. `BLPOP`의 `0`은 작업이 들어올 때까지 대기한다는 뜻입니다.
+
+### 스택으로 사용하기
+
+```redis
+LPUSH stack:history page:/home
+LPUSH stack:history page:/projects
+LPOP stack:history
+```
+
+같은 쪽에서 넣고 빼면 후입선출 스택이 됩니다. `LPUSH`와 `RPOP`처럼 서로 반대쪽을 사용하면 큐가 됩니다.
+
+### List의 중간 조회는 조심해야 합니다
+
+```redis
+LRANGE queue:email 0 19
+```
+
+List는 양쪽 끝 작업에 강하지만, 중간 인덱스에 자주 접근하거나 대규모 페이지를 임의로 조회하는 자료구조는 아닙니다. `LRANGE 0 -1`처럼 전체를 가져오는 코드는 데이터가 커질수록 응답 크기와 처리 시간이 함께 증가합니다.
+
+또한 List는 단순한 작업 큐로는 좋지만, 소비자별 처리 상태·ACK·재처리·이벤트 ID가 필요하면 Stream을 검토하는 편이 더 명확합니다.
+
+## 4. Set: 중복 없는 멤버와 집합 연산
+
+Set은 순서가 없는 고유한 문자열의 모음입니다. 같은 멤버를 여러 번 추가해도 한 번만 존재하며, 멤버십 검사·추가·삭제와 교집합·합집합·차집합을 지원합니다. Redis 공식 문서는 Set의 멤버 존재 확인과 추가·삭제가 일반적으로 `O(1)`이라고 설명합니다. [Redis Sets 공식 문서](https://redis.io/docs/latest/develop/data-types/sets/)
+
+```redis
+SADD user:42:roles admin reviewer admin
+SISMEMBER user:42:roles admin
+SMEMBERS user:42:roles
+SREM user:42:roles reviewer
+```
+
+`admin`을 두 번 넣었지만 Set에는 한 번만 저장됩니다. 이 특성은 중복 제거와 포함 여부 확인에 유용합니다.
+
+### Set의 집합 연산
+
+```redis
+SADD team:frontend junha mina
+SADD team:backend junha soojin
+
+SINTER team:frontend team:backend
+SUNION team:frontend team:backend
+SDIFF team:frontend team:backend
+```
+
+각각 두 집합의 교집합·합집합·차집합을 계산합니다. 권한 그룹, 관심사 태그, 중복 제거된 참여자 목록처럼 “순서보다 소속 관계”가 중요한 데이터에 적합합니다.
+
+### Set을 사용할 때 주의할 점
+
+Set은 순서를 보장하지 않습니다. 최근 가입자 순, 점수 순, 선택 순서처럼 정렬이 필요해지는 순간에는 Sorted Set이 필요합니다.
+
+또한 `SMEMBERS`는 전체 멤버를 반환하므로 큰 Set에서 호출하면 한 번에 많은 데이터를 애플리케이션으로 가져오게 됩니다. 전체 순회가 필요하면 `SSCAN`처럼 커서를 사용하는 명령을 검토하고, 페이지 조회가 핵심이면 정렬 기준을 가진 Sorted Set을 모델의 중심에 두는 것이 좋습니다.
+
+## 5. Sorted Set: Set과 순위를 결합한 자료구조
+
+Sorted Set은 고유한 member마다 score를 하나씩 연결하고, score를 기준으로 member를 정렬합니다. 같은 score를 가진 member끼리는 사전식 순서로 정렬됩니다. [Redis Sorted Sets 공식 문서](https://redis.io/docs/latest/develop/data-types/sorted-sets/)
+
+```redis
+ZADD leaderboard 1200 user:42
+ZADD leaderboard 980 user:17
+ZADD leaderboard 1200 user:88
+
+ZREVRANGE leaderboard 0 9 WITHSCORES
+ZRANK leaderboard user:42
+ZSCORE leaderboard user:42
+```
+
+### Sorted Set의 핵심 명령과 비용
+
+`N`을 자료구조에 들어 있는 member 수, `M`을 반환하는 member 수라고 하면 대표적인 비용은 다음과 같습니다.
+
+| 명령 | 용도 | 대표 시간복잡도 |
+| --- | --- | --- |
+| `ZADD` | 추가 또는 score 갱신 | `O(log N)` |
+| `ZSCORE` | member의 score 조회 | `O(1)` |
+| `ZRANK` | 순위 조회 | `O(log N)` |
+| `ZRANGE` | rank 범위 조회 | `O(log N + M)` |
+| `ZRANGEBYSCORE` | score 범위 조회 | `O(log N + M)` |
+| `ZREM` | member 삭제 | `O(log N)`에 가까운 구조적 비용 |
+
+정확한 비용은 명령의 옵션과 반환 개수에 따라 달라질 수 있으므로, 운영 환경에서는 [Redis 명령어 문서](https://redis.io/docs/latest/commands/)의 해당 명령 페이지를 기준으로 확인해야 합니다.
+
+### 어떤 문제에 적합한가요?
+
+- 리더보드와 순위표
+- 우선순위 큐
+- 시간순 만료·예약 작업 목록
+- 점수 기반 추천 결과
+- 정렬이 필요한 페이지네이션
+- 특정 시간 범위의 이벤트 조회
+
+예를 들어 예약 작업을 실행 시각순으로 관리할 수 있습니다.
+
+```redis
+ZADD jobs:scheduled 1753000200000 job:1001
+ZADD jobs:scheduled 1753000260000 job:1002
+ZRANGEBYSCORE jobs:scheduled -inf 1753000260000 LIMIT 0 100
+```
+
+### score가 같을 때의 순서를 설계해야 합니다
+
+시간을 밀리초 단위 score로 사용해도 같은 시각에 여러 요청이 들어올 수 있습니다. Redis Sorted Set은 같은 score에서 member를 사전식으로 비교하므로, 애플리케이션이 기대하는 순서와 다를 수 있습니다.
+
+다음과 같은 방법을 검토할 수 있습니다.
+
+1. member에 고유한 증가 번호나 UUID를 포함합니다.
+2. score에 충분히 세밀한 시간값을 사용합니다.
+3. 같은 score를 허용하되, 동률일 때의 순서를 애플리케이션에서 명시합니다.
+
+무작정 score에 큰 수를 붙여 유일하게 만들기보다, score가 의미하는 기준과 member의 정렬 규칙을 문서화하는 것이 중요합니다.
+
+### 현재 포트폴리오 프로젝트에서의 활용
+
+포트폴리오의 [Smart Messaging System](/projects/smart-messaging-system)에서는 여러 검색 조건을 오가며 선택한 수신자를 Redis Draft에 누적하고, Selected 탭에서 페이지 단위로 보여주기 위해 Sorted Set을 활용했습니다. 이 사례의 자세한 문제 정의와 하이브리드 페이지네이션은 [수신자 선택 목록을 Redis Draft로 관리한 이유](/blog/redis-draft-hybrid-pagination)에서 별도로 정리했습니다.
+
+개념적으로는 다음과 같은 모델입니다.
+
+```text
+draft:{draftId}:recipients  -> Sorted Set
+  member: customer:{id}
+  score: 선택 순서 또는 선택 시각
+
+customer:{id}               -> Hash
+  field: name, email, tags...
+```
+
+Sorted Set은 “어떤 수신자가 선택 목록에 들어 있는가”와 “어떤 순서로 페이지에 노출할 것인가”를 담당하고, 수신자의 상세 필드는 Hash 같은 별도 구조가 담당합니다. Redis 공식 비교 가이드도 Set이나 Sorted Set에 추가 정보를 붙여야 할 때 보조 Hash나 JSON을 둘 수 있다고 안내합니다.
+
+## 6. Stream: 이벤트를 쌓고 소비자별로 처리하기
+
+Stream은 append-only log처럼 동작하는 자료구조입니다. 각 항목은 고유한 ID와 field-value 묶음으로 저장되며, 이벤트가 추가된 순서에 따라 읽을 수 있습니다. [Redis Streams 공식 문서](https://redis.io/docs/latest/develop/data-types/streams/)
+
+### 이벤트 추가와 읽기
+
+```redis
+XADD orders * type CREATED orderId 1001 userId 42
+XADD orders * type PAID orderId 1001 userId 42
+
+XRANGE orders - + COUNT 10
+XREAD COUNT 10 STREAMS orders 0
+```
+
+`*`를 사용하면 Redis가 현재 시각 기반의 Stream ID를 생성합니다. 반환되는 이벤트에는 이후 특정 항목을 다시 가리킬 수 있는 ID가 포함됩니다.
+
+### Consumer Group을 사용하면 무엇이 달라지나요?
+
+Consumer Group을 사용하면 여러 소비자가 하나의 작업을 나누어 처리할 수 있습니다.
+
+```redis
+XGROUP CREATE orders order-workers $ MKSTREAM
+
+XREADGROUP GROUP order-workers worker-1 \
+  COUNT 10 BLOCK 5000 STREAMS orders >
+
+XACK orders order-workers 1753000200000-0
+```
+
+`XREADGROUP`으로 전달받았지만 아직 `XACK`하지 않은 이벤트는 소비자 그룹의 Pending Entries List(PEL)에 남습니다. 소비자가 처리에 성공하면 `XACK`으로 처리 완료를 기록해야 합니다. Redis 공식 `XACK` 문서도 ACK가 PEL에서 메시지를 제거하는 역할을 한다고 설명합니다.
+
+<figure className="not-prose">
+  <img
+    src="/images/blog/redis-stream-consumer-groups-v2.webp"
+    alt="Producer가 Redis Stream에 이벤트를 추가하고 두 Consumer가 나눠 처리한 뒤 ACK와 재시도 흐름으로 돌아오는 개념도"
+    loading="lazy"
+    decoding="async"
+    className="h-auto w-full rounded-2xl border border-card-border bg-foreground/5"
+  />
+  <figcaption>Stream은 이벤트를 로그에 쌓은 뒤 Consumer Group이 작업을 나누고, 처리 결과를 ACK로 기록하는 흐름을 만듭니다. 본문 개념을 보조하기 위해 생성한 도식입니다.</figcaption>
+</figure>
+
+### Stream은 적어도 한 번 처리될 수 있음을 전제로 해야 합니다
+
+Stream Consumer Group에서는 장애나 재시도 과정에서 같은 이벤트가 다시 전달될 수 있습니다. 따라서 소비자 로직은 다음 중 하나를 갖춰야 합니다.
+
+- 이벤트 ID를 저장하고 이미 처리한 이벤트를 건너뜁니다.
+- 주문 상태 변경처럼 같은 요청이 반복되어도 결과가 하나로 수렴하도록 멱등성을 설계합니다.
+- 처리 성공 이후에만 `XACK`합니다.
+- 오래 처리되지 않은 pending 이벤트를 관찰하고 다른 소비자에게 넘길 복구 절차를 마련합니다.
+
+### Stream과 List 중 무엇을 선택할까요?
+
+| 기준 | List | Stream |
+| --- | --- | --- |
+| 목적 | 단순 큐·스택 | 이벤트 로그·메시지 스트림 |
+| 이벤트 ID | 애플리케이션이 직접 관리 | Redis가 생성 |
+| Consumer Group | 기본 제공하지 않음 | 제공 |
+| ACK·Pending | 직접 구현해야 함 | `XACK`, PEL 제공 |
+| 재처리 | 별도 구조 필요 | 소비자 그룹 흐름에 포함 |
+| 보존·정리 | `LTRIM` 등으로 직접 관리 | `XTRIM` 등으로 관리 |
+
+단순히 “작업 하나를 꺼내서 실행하고 버리기”만 필요하면 List가 더 단순합니다. 여러 소비자, 재처리, 감사 로그, 이벤트 순서가 중요하면 Stream이 더 적합합니다.
+
+## 7. 특수 목적 자료구조
+
+기본 자료구조로도 대부분의 애플리케이션 문제를 풀 수 있지만, 특정 계산을 위해 특화된 자료구조를 사용하면 메모리와 처리량 측면에서 더 나은 모델을 만들 수 있습니다.
+
+### Bitmap: String을 비트 배열처럼 사용하기
+
+Bitmap은 독립된 최상위 자료구조라기보다 String에 비트 단위 연산을 적용하는 방식입니다. [Redis Bitmap 공식 문서](https://redis.io/docs/latest/develop/data-types/strings/bitmaps/)도 Bitmap을 String을 비트 벡터로 취급하는 연산 집합으로 설명합니다.
+
+```redis
+SETBIT attendance:2026-07-20 42 1
+GETBIT attendance:2026-07-20 42
+BITCOUNT attendance:2026-07-20
+```
+
+사용자 ID처럼 정수 범위가 정해져 있고, 각 사용자의 상태가 0 또는 1이면 유용합니다.
+
+- 오늘 로그인한 사용자 표시
+- 특정 기능을 활성화한 사용자 표시
+- 권한 비트 플래그
+- 날짜별 출석 여부
+
+반대로 사용자 ID가 UUID처럼 크고 불연속적이면 비트 위치에 직접 매핑하기 어렵습니다. 이 경우 Set이 더 읽기 쉬울 수 있습니다.
+
+### HyperLogLog: 정확한 목록이 아니라 고유 개수의 근사치
+
+HyperLogLog는 대규모 데이터에서 고유 원소의 개수, 즉 cardinality를 메모리 효율적으로 추정하는 확률적 자료구조입니다. [Redis HyperLogLog 공식 문서](https://redis.io/docs/latest/develop/data-types/probabilistic/hyperloglogs/) 기준으로 `PFADD`, `PFCOUNT`, `PFMERGE`를 사용합니다.
+
+```redis
+PFADD visitors:2026-07-20 user:1 user:2 user:3
+PFADD visitors:2026-07-20 user:2 user:4
+PFCOUNT visitors:2026-07-20
+```
+
+HyperLogLog의 결과는 “정확한 사용자 목록”이 아닙니다. 다음과 같이 개수만 필요한 경우에 사용합니다.
+
+- 일일 순 방문자 수 추정
+- 여러 서비스의 고유 이벤트 수 집계
+- 대규모 로그의 고유 IP 수 추정
+
+정확한 멤버 조회나 중복 제거된 목록이 필요하면 Set을 사용해야 합니다.
+
+### Geospatial: 좌표와 거리 기반 조회
+
+Geospatial 자료구조는 경도·위도와 member를 저장하고 반경이나 영역을 기준으로 위치를 검색할 때 사용합니다. [Redis Geospatial 공식 문서](https://redis.io/docs/latest/develop/data-types/geospatial/)에는 `GEOADD`, `GEODIST`, `GEOSEARCH` 등의 명령이 정리되어 있습니다.
+
+```redis
+GEOADD stores 126.9780 37.5665 store:seoul
+GEOADD stores 129.0756 35.1796 store:busan
+
+GEOSEARCH stores FROMLONLAT 126.9780 37.5665 \
+  BYRADIUS 10 km WITHDIST
+```
+
+반경 검색이 핵심인 배달 매장, 주변 시설, 위치 기반 추천에서 유용합니다. 단순 문자열 주소를 저장하는 것과 다르게 좌표계·거리 단위·정확도 요구사항을 함께 설계해야 합니다.
+
+### Redis JSON: 중첩 문서와 경로 단위 접근
+
+Redis JSON은 JSON 객체와 배열을 계층 구조로 저장하고, JSON 경로를 기준으로 일부 값을 읽거나 수정하는 기능을 제공합니다. [Redis JSON 공식 문서](https://redis.io/docs/latest/develop/data-types/json/)
+
+```redis
+JSON.SET product:42 $ '{"name":"keyboard","stock":12,"options":["white","black"]}'
+JSON.GET product:42 $.name
+JSON.NUMINCRBY product:42 $.stock -1
+```
+
+다음 조건이라면 Hash보다 JSON이 표현하기 쉽습니다.
+
+- 객체 안에 객체가 여러 단계로 중첩됩니다.
+- 배열을 함께 저장하고 일부 경로만 수정해야 합니다.
+- Redis JSON과 검색 기능을 함께 사용합니다.
+
+다만 Redis JSON은 일반 String에 JSON 텍스트를 저장하는 것과 다릅니다. 서버에서 JSON 구조를 이해하고 처리하는 만큼 메모리·명령어·배포 환경을 확인해야 합니다. 단순 캐시라면 String이 더 적은 기능으로 충분할 수 있습니다.
+
+### 그 밖의 자료구조
+
+Redis 최신 자료구조 문서에는 Time Series, Vector Sets, Bloom Filter, Cuckoo Filter, Count-min Sketch, t-digest, Top-K 등도 소개되어 있습니다. 시계열 집계, 벡터 유사도 검색, 확률적 membership 검사, percentile 추정처럼 문제의 계산 방식이 명확할 때 검토할 수 있습니다. 일반적인 CRUD 캐시를 만드는 단계에서 모든 자료구조를 도입할 필요는 없습니다.
+
+## 자료구조 선택만큼 중요한 키 설계
+
+자료구조를 올바르게 선택해도 키 설계가 불명확하면 운영이 어려워집니다. 키 이름에는 서비스·도메인·식별자·용도를 일정한 순서로 담는 편이 좋습니다.
+
+```text
+session:{sessionId}
+user:{userId}
+user:{userId}:roles
+queue:email
+leaderboard:{gameId}
+draft:{draftId}:recipients
+```
+
+다음 원칙을 적용할 수 있습니다.
+
+1. 콜론으로 계층을 구분하되, 팀 전체가 같은 규칙을 사용합니다.
+2. 키만 보고 어떤 자료구조인지와 소유 도메인을 추측할 수 있게 합니다.
+3. 사용자 입력을 키에 그대로 연결하지 않고 허용된 문자와 길이를 검증합니다.
+4. 여러 환경이 같은 Redis를 공유한다면 `dev:`, `staging:`, `prod:` 같은 namespace를 둡니다.
+5. 전체 삭제나 마이그레이션이 필요한 도메인은 prefix로 묶을 수 있게 합니다.
+
+키 namespace는 논리적인 구분일 뿐, Redis에 별도의 폴더가 생기는 것은 아닙니다. 운영 환경에서 특정 prefix를 찾을 때 `KEYS`로 전체 키를 조회하는 방식은 피하고, 영향 범위를 고려해 `SCAN`을 사용하거나 애플리케이션에서 관리되는 인덱스를 둡니다.
+
+## TTL과 메모리: 저장할 수 있다는 것과 계속 저장해도 된다는 것은 다릅니다
+
+Redis는 메모리 기반 서버이므로 자료구조 선택과 함께 데이터 수명과 최대 크기를 정해야 합니다.
+
+### 캐시에는 TTL을 기본값으로 검토합니다
+
+```redis
+SET cache:recommendation:user:42 "..." EX 300
+```
+
+TTL이 없는 캐시는 오래된 데이터와 메모리 증가를 동시에 만들 수 있습니다. 다만 모든 데이터에 무조건 짧은 TTL을 넣으면 캐시 미스가 늘고, 원본 시스템에 부하가 몰릴 수 있으므로 데이터의 변경 주기·재생성 비용·정합성 요구를 기준으로 결정합니다.
+
+캐시 만료 시점이 한꺼번에 겹치면 많은 요청이 동시에 원본을 조회하는 cache stampede가 생길 수 있습니다. 만료 시간을 약간씩 분산하거나, 갱신 주체를 하나로 제한하거나, stale-while-revalidate 같은 전략을 검토할 수 있습니다.
+
+### 큰 컬렉션은 전체 조회를 금지해야 합니다
+
+다음 명령들은 자료구조가 커질수록 응답 크기가 커질 수 있습니다.
+
+```redis
+HGETALL large:hash
+SMEMBERS large:set
+LRANGE large:list 0 -1
+ZRANGE large:zset 0 -1
+```
+
+항상 잘못된 명령은 아닙니다. 관리 도구나 작은 데이터에서는 편리하지만, 사용자 요청 경로에서 무제한 컬렉션 전체를 읽는다면 페이지 크기·커서·score 범위·요약 카운터를 설계해야 합니다.
+
+### Redis의 내부 인코딩은 메모리와 CPU의 교환 관계를 가집니다
+
+작은 Hash, List, Set, Sorted Set은 버전과 설정에 따라 메모리 효율적인 인코딩을 사용할 수 있습니다. 특정 임계치를 넘으면 Redis가 일반적인 인코딩으로 변환할 수 있으므로, “작은 테스트 데이터에서는 괜찮았다”는 결과를 대규모 데이터에 그대로 적용하면 안 됩니다.
+
+운영 중에는 다음 명령으로 실제 상태를 확인할 수 있습니다.
+
+```redis
+TYPE user:42
+MEMORY USAGE user:42
+OBJECT ENCODING user:42
+INFO memory
+```
+
+임계치 설정과 자동 변환에 대해서는 [Redis 메모리 최적화 문서](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/)를 확인하고, 설정을 바꿀 때는 실제 데이터 분포로 벤치마크해야 합니다.
+
+## 여러 명령을 묶을 때: Pipeline과 Transaction은 다릅니다
+
+Redis에서는 하나의 요청을 처리하기 위해 여러 키를 읽어야 하는 경우가 자주 있습니다. 이때 Pipeline과 Transaction을 같은 개념으로 생각하면 안 됩니다.
+
+### Pipeline은 네트워크 왕복을 줄입니다
+
+Pipeline은 여러 명령을 먼저 전송한 뒤 응답을 묶어서 받는 방식입니다. 네트워크 왕복 횟수와 I/O 호출을 줄일 수 있지만, Pipeline 자체가 명령 사이의 원자성이나 롤백을 보장하지는 않습니다. [Redis Pipelining 공식 문서](https://redis.io/docs/latest/develop/using-commands/pipelining/)
+
+예를 들어 Sorted Set에서 페이지의 customer ID를 가져온 뒤 각 Hash의 상세 필드를 읽어야 한다면, 상세 Hash 조회를 Pipeline으로 묶어 round trip을 줄일 수 있습니다. 단, 너무 많은 명령을 한 번에 넣으면 서버가 응답을 보관하기 위한 메모리를 사용하므로 적절한 batch 크기를 정해야 합니다.
+
+### Transaction은 명령 묶음의 실행 경계를 만듭니다
+
+`MULTI`와 `EXEC` 사이에 큐에 넣은 명령은 `EXEC` 시점에 순서대로 실행되고, 다른 클라이언트의 명령이 그 중간에 끼어들지 않습니다.
+
+```redis
+MULTI
+HINCRBY account:42 balance 100
+HSET account:42 updatedAt 1753000200000
+EXEC
+```
+
+Redis Transaction은 전통적인 데이터베이스 트랜잭션처럼 자동 롤백을 제공하지 않습니다. 명령 하나가 실행 시점에 실패해도 나머지 명령이 계속 처리될 수 있으므로, 명령 타입·키 타입·검증 로직을 함께 확인해야 합니다. 경쟁 조건을 제어해야 한다면 `WATCH`를 사용하는 Optimistic Locking이나 Lua Script/Redis Function을 검토합니다. 자세한 보장은 [Redis Transactions 공식 문서](https://redis.io/docs/latest/develop/using-commands/transactions/)에 정리되어 있습니다.
+
+## 실무 시나리오별 추천 자료구조
+
+| 시나리오 | 1차 선택 | 함께 고려할 것 |
+| --- | --- | --- |
+| 사용자 세션, 짧은 캐시 값 | String | TTL, cache stampede |
+| 사용자 프로필과 상태 필드 | Hash | `HMGET`, 큰 Hash 분할 |
+| 이메일·작업 큐 | List | blocking connection, 실패 재처리 |
+| 중복 없는 태그·권한 목록 | Set | `SISMEMBER`, 집합 연산, 전체 조회 제한 |
+| 리더보드·예약 작업·선택 목록 | Sorted Set | score 동률, 페이지 범위, 보조 Hash |
+| 주문 이벤트·비동기 처리 | Stream | Consumer Group, ACK, PEL, 보존 기간 |
+| 정수 ID의 Boolean 상태 | Bitmap | ID 범위, bit offset, 희소 데이터 |
+| 일일 순 방문자 수 추정 | HyperLogLog | 근사치 허용 여부 |
+| 주변 매장 검색 | Geospatial | 좌표 정확도, 거리 단위 |
+| 중첩 상품·설정 문서 | Redis JSON | JSON 경로, 메모리, 배포 기능 |
+
+## 흔히 하는 실수와 교정 방법
+
+### 1. 모든 데이터를 String JSON 하나로 저장하기
+
+객체 전체 캐시에는 괜찮지만, 필드 단위 수정과 조건 검색이 많아지면 읽기·직렬화·동시성 비용이 커집니다. 평평한 객체는 Hash, 중첩 문서는 Redis JSON을 검토합니다.
+
+### 2. 정렬이 필요한데 Set을 사용하기
+
+Set은 중복을 제거하지만 순서를 보장하지 않습니다. 최신순·점수순·우선순위순이 필요하다면 Sorted Set을 사용하고, 상세 데이터는 별도의 Hash나 JSON에 둡니다.
+
+### 3. 페이지 조회에 List 전체 읽기를 사용하기
+
+List는 큐와 양끝 작업에 적합합니다. 임의 순위 조회와 정렬 기준이 중요하면 Sorted Set이나 데이터베이스의 페이지네이션을 검토합니다.
+
+### 4. `HGETALL`, `SMEMBERS`, `LRANGE 0 -1`을 사용자 요청마다 호출하기
+
+처음에는 간단하지만 데이터가 커질수록 응답 크기와 Redis 이벤트 루프 점유 시간이 커질 수 있습니다. 필요한 필드만 읽고, 범위를 제한하고, 커서 기반 순회를 사용합니다.
+
+### 5. Stream에서 `XACK`을 누락하기
+
+ACK가 없으면 처리 완료된 메시지도 Pending Entries List에 남을 수 있습니다. 처리 성공 조건을 명확히 한 뒤 성공한 이벤트만 `XACK`합니다.
+
+### 6. Pipeline을 Transaction으로 착각하기
+
+Pipeline은 통신 효율을 위한 기능이고, Transaction은 명령 실행 경계를 위한 기능입니다. 여러 명령이 반드시 함께 실행되어야 하는지, 단순히 네트워크 왕복만 줄이면 되는지 먼저 구분합니다.
+
+### 7. Redis를 자료구조만 보고 영구 데이터베이스처럼 사용하기
+
+자료구조가 빠르다는 사실만으로 데이터의 영속성·복구·복제·장애 조치가 해결되지는 않습니다. 중요한 원본 데이터라면 RDB/AOF, 복제, 백업, 장애 시나리오를 별도로 설계해야 합니다.
+
+## 자료구조 선택을 위한 최종 체크리스트
+
+새로운 Redis 키를 만들기 전에 다음 질문에 답해보면 됩니다.
+
+1. 이 데이터는 하나의 값인가, 필드가 있는 객체인가, 여러 멤버의 컬렉션인가요?
+2. 중복을 허용해야 하나요?
+3. 순서나 점수·시간 기준 정렬이 필요한가요?
+4. 전체 조회가 필요한가요, 일부 범위 조회가 필요한가요?
+5. 여러 소비자가 읽고 ACK·재처리를 해야 하나요?
+6. 정확한 값이 필요한가요, 근사치도 허용되나요?
+7. 데이터의 수명과 TTL은 어떻게 되나요?
+8. 최악의 컬렉션 크기에서 한 번의 명령이 반환할 데이터는 얼마나 되나요?
+9. 관련 키를 여러 개 갱신할 때 Pipeline이면 충분한가요, Transaction이 필요한가요?
+10. Redis 장애나 만료 이후에도 원본 데이터를 복구할 수 있나요?
+
+Redis 자료구조 선택은 “가장 빠른 타입 하나를 고르는 문제”가 아닙니다. 필요한 연산을 자료구조의 기본 기능으로 표현하고, 반환량·메모리·수명·동시성·복구 요구를 함께 제한하는 모델링 문제입니다. 이 기준이 분명해지면 String과 Hash, Set과 Sorted Set, List와 Stream 사이에서 선택하는 일이 훨씬 수월해집니다.
+
+## 자료구조를 적용할 때 주의할 점
+
+### String·Hash·Redis JSON을 데이터 형태에 맞게 구분합니다
+
+값 전체를 한 번에 저장하고 읽는다면 String이 단순합니다. 객체의 특정 필드만 읽거나 수정해야 한다면 Hash가 적합합니다. 중첩 객체와 JSON 경로 단위 접근이 필요하면 Redis JSON을 검토합니다. 데이터가 커진 뒤에 저장 형식을 바꾸는 비용이 크기 때문에, 처음부터 가장 자주 수행할 변경 연산을 기준으로 선택해야 합니다.
+
+### Set은 순서를 보장하지 않습니다
+
+Set은 중복 없는 멤버와 집합 연산에 집중합니다. 최신순·점수순·선택순처럼 정렬이 필요하다면 Sorted Set을 사용해야 합니다. Set에 저장된 값을 애플리케이션에서 다시 정렬하는 방식은 데이터가 커질수록 불필요한 조회와 메모리 사용을 만들 수 있습니다.
+
+### List와 Stream의 책임 범위를 섞지 않습니다
+
+단순한 FIFO 큐나 스택이면 List가 충분합니다. 이벤트 ID, Consumer Group, ACK, Pending Entries, 재처리가 필요하면 Stream이 더 적합합니다. List에 소비자 상태와 재처리 목록을 직접 덧붙이기 시작했다면 Stream으로 옮길 시점인지 검토할 수 있습니다.
+
+### Sorted Set의 동률 정렬을 미리 설계합니다
+
+같은 score를 가진 member는 사전식 순서로 비교됩니다. 시간순·선택순처럼 동률의 순서가 중요하면 member에 고유한 정렬 기준을 포함하거나, 애플리케이션에서 동률 처리 규칙을 명시해야 합니다.
+
+### HyperLogLog를 정확한 목록처럼 사용하지 않습니다
+
+HyperLogLog는 대규모 고유 개수의 근사치를 계산하는 자료구조입니다. 실제 사용자 목록을 가져오거나 멤버십을 검사할 수 없으므로, 정확한 목록과 중복 제거가 필요하면 Set을 사용해야 합니다.
+
+### Pipeline과 Transaction을 혼동하지 않습니다
+
+Pipeline은 여러 명령을 묶어 네트워크 왕복을 줄이는 기능입니다. 명령 사이에 다른 클라이언트가 개입하지 않아야 한다면 Transaction, `WATCH`, Script 또는 Function을 검토해야 합니다. 성능을 위해 Pipeline을 적용하면서 원자성까지 확보됐다고 가정하면 안 됩니다.
+
+## 참고한 공식 문서
+
+- [Redis data types](https://redis.io/docs/latest/develop/data-types/)
+- [Compare data types](https://redis.io/docs/latest/develop/data-types/compare-data-types/)
+- [Redis Strings](https://redis.io/docs/latest/develop/data-types/strings/)
+- [Redis Hashes](https://redis.io/docs/latest/develop/data-types/hashes/)
+- [Redis Lists](https://redis.io/docs/latest/develop/data-types/lists/)
+- [Redis Sets](https://redis.io/docs/latest/develop/data-types/sets/)
+- [Redis Sorted Sets](https://redis.io/docs/latest/develop/data-types/sorted-sets/)
+- [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/)
+- [Redis Bitmaps](https://redis.io/docs/latest/develop/data-types/strings/bitmaps/)
+- [Redis HyperLogLog](https://redis.io/docs/latest/develop/data-types/probabilistic/hyperloglogs/)
+- [Redis Geospatial](https://redis.io/docs/latest/develop/data-types/geospatial/)
+- [Redis JSON](https://redis.io/docs/latest/develop/data-types/json/)
+- [Redis memory optimization](https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/)
+- [Redis pipelining](https://redis.io/docs/latest/develop/using-commands/pipelining/)
+- [Redis transactions](https://redis.io/docs/latest/develop/using-commands/transactions/)
+- 대표 이미지: [Redis 공식 GitHub 조직의 Jedis 저장소 로고 asset](https://github.com/redis/jedis/blob/master/redis-logo-full-color-rgb.png)

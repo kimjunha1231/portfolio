@@ -1,0 +1,120 @@
+import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
+import { Calendar } from "lucide-react";
+import { getPostBySlug, getPostSlugs, toRawMarkdown } from "@/lib/mdx";
+import {
+  getContentMetadata,
+  getContentStructuredData,
+} from "@/lib/seo";
+import { PERSON_NAME } from "@/lib/site";
+import CopyMarkdownButton from "@/components/shared/CopyMarkdownButton";
+import StructuredData from "@/components/shared/StructuredData";
+
+interface BlogPostPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return getPostSlugs("blog").map((slug) => ({ slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: BlogPostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = getPostBySlug("blog", slug);
+
+  if (!post) {
+    notFound();
+  }
+
+  return getContentMetadata(post, "blog");
+}
+
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const { slug } = await params;
+  const post = getPostBySlug("blog", slug);
+
+  if (!post) {
+    notFound();
+  }
+
+  const rawMarkdownContent = toRawMarkdown(post);
+
+  return (
+    <article className="min-h-screen py-24 px-6 md:px-12 lg:px-24 max-w-4xl mx-auto w-full relative z-10">
+      <StructuredData
+        id="blog-post-structured-data"
+        data={getContentStructuredData(post, "blog")}
+      />
+      <header className="mb-12 pb-8 border-b border-card-border">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight leading-tight mb-6">
+          {post.title}
+        </h1>
+
+        {post.description && (
+          <p className="max-w-3xl text-sm leading-relaxed text-foreground/70 mb-6">
+            {post.description}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-foreground/50">
+          <div className="flex items-center gap-4">
+            <span>
+              작성자 <Link href="/" className="hover:text-accent-blue transition-colors">{PERSON_NAME}</Link>
+            </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-foreground/20" aria-hidden="true" />
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>최종 업데이트</span>
+              <time dateTime={post.lastModified}>
+                {post.lastModified}
+              </time>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <CopyMarkdownButton content={rawMarkdownContent} />
+          </div>
+        </div>
+      </header>
+
+      {post.cover && (
+        <figure className="mb-12 overflow-hidden rounded-3xl border border-card-border bg-foreground/5">
+          <div className="relative aspect-[1.91]">
+            <Image
+              src={post.cover}
+              alt={post.coverAlt || `${post.title} 대표 이미지`}
+              fill
+              priority
+              sizes="(max-width: 896px) 100vw, 896px"
+              className={post.coverFit === "contain" ? "object-contain p-10" : "object-cover"}
+            />
+          </div>
+          <figcaption className="sr-only">{post.coverAlt || `${post.title} 대표 이미지`}</figcaption>
+        </figure>
+      )}
+
+      <div className="markdown-content">
+        <MDXRemote
+          source={post.content}
+          options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+        />
+      </div>
+
+      <footer className="mt-20 pt-8 border-t border-card-border flex items-center justify-between">
+        <Link href="/blog" className="text-xs font-mono text-foreground/50 hover:text-accent-blue transition-colors">
+          &larr; All posts
+        </Link>
+        <span className="text-[10px] font-mono text-foreground/40">Junha.dev &copy; 2026</span>
+      </footer>
+    </article>
+  );
+}

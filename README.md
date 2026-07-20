@@ -16,6 +16,16 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## SEO · AEO
+
+배포 시 canonical URL이 실제 도메인과 일치하도록 `NEXT_PUBLIC_SITE_URL`을 설정합니다. 기본값은 `https://portfolio.junha.dev`입니다.
+
+- `/sitemap.xml`: 콘텐츠에서 자동 생성되는 검색엔진 sitemap
+- `/robots.txt`: Google·Naver·주요 AI crawler의 공개 콘텐츠 접근 규칙
+- `/llms.txt`, `/llms-full.txt`, `/skill.md`: AI 에이전트용 짧은 인덱스·전체 Markdown·역량 안내
+- `/blog/:slug/raw`, `/projects/:slug/raw`: 상세 페이지의 clean Markdown 원문
+- Search Console과 Naver Search Advisor 인증 값은 `.env.example`의 공개 환경변수 항목을 참고합니다.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
