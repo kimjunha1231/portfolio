@@ -1,11 +1,10 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
-import { Calendar } from "lucide-react";
+import { Calendar, ExternalLink } from "lucide-react";
 import { getPostBySlug, getPostSlugs, toRawMarkdown } from "@/lib/mdx";
 import {
   getContentMetadata,
@@ -14,6 +13,11 @@ import {
 import { PERSON_NAME } from "@/lib/site";
 import CopyMarkdownButton from "@/components/shared/CopyMarkdownButton";
 import StructuredData from "@/components/shared/StructuredData";
+import ZoomableImage from "@/components/shared/ZoomableImage";
+import {
+  PROJECT_PLATFORM_LABELS,
+  PROJECT_ROLE_LABELS,
+} from "@/lib/project-taxonomy";
 
 interface ProjectPostPageProps {
   params: Promise<{ slug: string }>;
@@ -56,12 +60,6 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
       />
 
       <header className="mb-12 pb-8 border-b border-card-border">
-        {project.category && (
-          <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-accent-blue bg-accent-blue/10 dark:bg-accent-blue/20 px-3 py-1 rounded-full w-max block mb-4">
-            {project.category}
-          </span>
-        )}
-
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight leading-tight mb-6">
           {project.title}
         </h1>
@@ -70,6 +68,27 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
           <p className="max-w-3xl text-sm leading-relaxed text-foreground/70 mb-6">
             {project.description}
           </p>
+        )}
+
+        {(project.platforms?.length || project.role) && (
+          <div
+            className="mb-6 flex flex-wrap gap-2"
+            aria-label="프로젝트 플랫폼과 담당 역할"
+          >
+            {project.platforms?.map((platform) => (
+              <span
+                key={platform}
+                className="rounded-full border border-card-border px-3 py-1.5 text-[10px] font-mono text-foreground/65"
+              >
+                플랫폼 · {PROJECT_PLATFORM_LABELS[platform]}
+              </span>
+            ))}
+            {project.role && (
+              <span className="rounded-full bg-accent-blue/10 px-3 py-1.5 text-[10px] font-mono text-accent-blue dark:bg-accent-blue/20">
+                담당 역할 · {PROJECT_ROLE_LABELS[project.role]}
+              </span>
+            )}
+          </div>
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-foreground/70">
@@ -88,6 +107,18 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {project.githubUrl && (
+              <a
+                href={project.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-card-border px-4 py-2 text-xs font-mono text-foreground/70 transition-colors hover:border-accent-blue/40 hover:text-accent-blue"
+                aria-label={`${project.title} GitHub 저장소`}
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>GitHub 저장소</span>
+              </a>
+            )}
             <CopyMarkdownButton content={rawMarkdownContent} />
           </div>
         </div>
@@ -96,13 +127,12 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
       {project.cover && (
         <figure className="mb-12 overflow-hidden rounded-3xl border border-card-border bg-foreground/5">
           <div className="relative aspect-[1.91]">
-            <Image
+            <ZoomableImage
               src={project.cover}
               alt={project.coverAlt || `${project.title} 대표 이미지`}
-              fill
-              priority
               sizes="(max-width: 896px) 100vw, 896px"
-              className={project.coverFit === "contain" ? "object-contain p-10" : "object-cover"}
+              loading="eager"
+              className={project.coverFit === "contain" ? "h-full w-full object-contain p-10" : "h-full w-full object-cover"}
             />
           </div>
           <figcaption className="sr-only">{project.coverAlt || `${project.title} 대표 이미지`}</figcaption>
@@ -113,6 +143,7 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
         <MDXRemote
           source={project.content}
           options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+          components={{ img: ZoomableImage, ZoomableImage }}
         />
       </div>
 

@@ -14,6 +14,7 @@ import {
 import { PERSON_NAME } from "@/lib/site";
 import CopyMarkdownButton from "@/components/shared/CopyMarkdownButton";
 import StructuredData from "@/components/shared/StructuredData";
+import ZoomableImage from "@/components/shared/ZoomableImage";
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -106,6 +107,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <MDXRemote
           source={post.content}
           options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+          components={{ ZoomableImage }}
         />
       </div>
 

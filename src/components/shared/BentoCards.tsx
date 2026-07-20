@@ -1,11 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar } from "lucide-react";
+import {
+  PROJECT_PLATFORM_LABELS,
+  PROJECT_ROLE_LABELS,
+  type ProjectPlatform,
+  type ProjectRole,
+} from "@/lib/project-taxonomy";
 
 export interface BentoCardItem {
   slug: string;
   title: string;
   category: string;
+  platforms?: ProjectPlatform[];
+  role?: ProjectRole;
   description: string;
   tags: string[];
   cover?: string;
@@ -66,6 +74,7 @@ interface BentoCardsProps {
   sectionLabel: string;
   detailLabel: string;
   actionLabel: string;
+  showCategory?: boolean;
 }
 
 export default function BentoCards({
@@ -74,6 +83,7 @@ export default function BentoCards({
   sectionLabel,
   detailLabel,
   actionLabel,
+  showCategory = true,
 }: BentoCardsProps) {
   return (
     <section
@@ -82,13 +92,13 @@ export default function BentoCards({
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12 md:gap-y-16">
         {items.map((item, index) => (
-          <Link
-            key={item.slug}
-            href={`${hrefPrefix}/${item.slug}`}
-            aria-label={`${item.title} ${detailLabel}`}
-            className="group block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-          >
-            <article className="h-full overflow-hidden rounded-[28px] border border-card-border bg-card-bg/70 shadow-[0_10px_35px_rgba(15,23,42,0.06)] transition-[transform,box-shadow,border-color] duration-300 group-hover:-translate-y-1 group-hover:border-accent-blue/30 group-hover:shadow-[0_18px_45px_rgba(15,23,42,0.1)] dark:shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
+          <div key={item.slug} className="relative">
+            <Link
+              href={`${hrefPrefix}/${item.slug}`}
+              aria-label={`${item.title} ${detailLabel}`}
+              className="group block rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            >
+              <article className="h-full overflow-hidden rounded-[28px] border border-card-border bg-card-bg/70 shadow-[0_10px_35px_rgba(15,23,42,0.06)] transition-[transform,box-shadow,border-color] duration-300 group-hover:-translate-y-1 group-hover:border-accent-blue/30 group-hover:shadow-[0_18px_45px_rgba(15,23,42,0.1)] dark:shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
               <div className="relative aspect-[1.62] overflow-hidden bg-foreground/5">
                 <CardCover item={item} priority={index < 2} />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/10 opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
@@ -96,9 +106,11 @@ export default function BentoCards({
 
               <div className="flex min-h-[285px] flex-col p-6 md:p-8">
                 <div className="flex items-start justify-between gap-4">
-                  <span className="rounded-full bg-accent-blue/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.1em] text-accent-blue dark:bg-accent-blue/20">
-                    {item.category}
-                  </span>
+                  {showCategory && (
+                    <span className="rounded-full bg-accent-blue/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.1em] text-accent-blue dark:bg-accent-blue/20">
+                      {item.category}
+                    </span>
+                  )}
                   <span className="font-mono text-[10px] text-foreground/40">
                     {String(index + 1).padStart(2, "0")}
                   </span>
@@ -107,6 +119,43 @@ export default function BentoCards({
                 <h2 className="mt-5 text-2xl font-light tracking-tight text-foreground transition-colors duration-300 group-hover:text-accent-blue md:text-3xl">
                   {item.title}
                 </h2>
+
+                {(item.platforms?.length || item.role) && (
+                  <div
+                    className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-card-border/70 py-3"
+                    aria-label="프로젝트 플랫폼과 담당 역할"
+                  >
+                    {item.platforms && item.platforms.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/40">
+                          Platform
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {item.platforms.map((platform) => (
+                            <span
+                              key={platform}
+                              className="rounded-full border border-foreground/10 px-2.5 py-1 text-[10px] font-mono text-foreground/70"
+                            >
+                              {PROJECT_PLATFORM_LABELS[platform]}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {item.role && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/40">
+                          Role
+                        </span>
+                        <span className="rounded-full bg-accent-blue/10 px-2.5 py-1 text-[10px] font-mono text-accent-blue dark:bg-accent-blue/20">
+                          {PROJECT_ROLE_LABELS[item.role]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <p className="mt-3 min-h-[4.5rem] text-sm font-light leading-relaxed text-foreground/70 line-clamp-3">
                   {item.description}
                 </p>
@@ -139,8 +188,10 @@ export default function BentoCards({
                   </span>
                 </div>
               </div>
-            </article>
-          </Link>
+              </article>
+            </Link>
+
+          </div>
         ))}
       </div>
     </section>

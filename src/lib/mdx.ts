@@ -1,6 +1,12 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import {
+  PROJECT_PLATFORMS,
+  PROJECT_ROLES,
+  type ProjectPlatform,
+  type ProjectRole,
+} from "@/lib/project-taxonomy";
 
 // 콘텐츠 루트 경로 설정
 const CONTENT_PATH = path.join(process.cwd(), "content");
@@ -12,11 +18,15 @@ export interface MDXPost {
   lastModified: string;
   section?: string;
   category?: string;
+  projectCategory?: string;
+  platforms?: ProjectPlatform[];
+  role?: ProjectRole;
   description?: string;
   tags?: string[];
   cover?: string;
   coverAlt?: string;
   coverFit?: "cover" | "contain";
+  githubUrl?: string;
   content: string;
 }
 
@@ -32,6 +42,21 @@ function parseFrontmatterDate(value: unknown) {
 
 function parseCoverFit(value: unknown): MDXPost["coverFit"] {
   return value === "contain" ? "contain" : undefined;
+}
+
+function parseProjectPlatforms(value: unknown): ProjectPlatform[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.filter((platform): platform is ProjectPlatform =>
+    typeof platform === "string" &&
+    PROJECT_PLATFORMS.includes(platform as ProjectPlatform),
+  );
+}
+
+function parseProjectRole(value: unknown): ProjectRole | undefined {
+  return typeof value === "string" && PROJECT_ROLES.includes(value as ProjectRole)
+    ? (value as ProjectRole)
+    : undefined;
 }
 
 export const getPostSlugs = (type: "blog" | "projects") =>
@@ -61,10 +86,18 @@ export function toRawMarkdown(post: MDXPost) {
     `lastModified: ${JSON.stringify(post.lastModified)}`,
     ...(post.section ? [`section: ${JSON.stringify(post.section)}`] : []),
     ...(post.category ? [`category: ${JSON.stringify(post.category)}`] : []),
+    ...(post.projectCategory
+      ? [`projectCategory: ${JSON.stringify(post.projectCategory)}`]
+      : []),
+    ...(post.platforms?.length
+      ? [`platforms: ${JSON.stringify(post.platforms)}`]
+      : []),
+    ...(post.role ? [`role: ${JSON.stringify(post.role)}`] : []),
     ...(post.tags?.length ? [`tags: ${JSON.stringify(post.tags)}`] : []),
     ...(post.cover ? [`cover: ${JSON.stringify(post.cover)}`] : []),
     ...(post.coverAlt ? [`coverAlt: ${JSON.stringify(post.coverAlt)}`] : []),
     ...(post.coverFit ? [`coverFit: ${JSON.stringify(post.coverFit)}`] : []),
+    ...(post.githubUrl ? [`githubUrl: ${JSON.stringify(post.githubUrl)}`] : []),
     ...(post.description
       ? [`description: ${JSON.stringify(post.description)}`]
       : []),
@@ -102,11 +135,16 @@ export function getAllPosts(type: "blog" | "projects"): MDXPost[] {
         lastModified: parseFrontmatterDate(data.lastModified) || date,
         section: typeof data.section === "string" ? data.section : "",
         category: data.category || "",
+        projectCategory:
+          typeof data.projectCategory === "string" ? data.projectCategory : "",
+        platforms: parseProjectPlatforms(data.platforms),
+        role: parseProjectRole(data.role),
         description: data.description || "",
         tags: Array.isArray(data.tags) ? data.tags : [],
         cover: typeof data.cover === "string" ? data.cover : "",
         coverAlt: typeof data.coverAlt === "string" ? data.coverAlt : "",
         coverFit: parseCoverFit(data.coverFit),
+        githubUrl: typeof data.githubUrl === "string" ? data.githubUrl : "",
         content,
       };
     });
@@ -155,11 +193,16 @@ export function getPostBySlug(type: "blog" | "projects", slug: string): MDXPost 
     lastModified: parseFrontmatterDate(data.lastModified) || date,
     section: typeof data.section === "string" ? data.section : "",
     category: data.category || "",
+    projectCategory:
+      typeof data.projectCategory === "string" ? data.projectCategory : "",
+    platforms: parseProjectPlatforms(data.platforms),
+    role: parseProjectRole(data.role),
     description: data.description || "",
     tags: Array.isArray(data.tags) ? data.tags : [],
     cover: typeof data.cover === "string" ? data.cover : "",
     coverAlt: typeof data.coverAlt === "string" ? data.coverAlt : "",
     coverFit: parseCoverFit(data.coverFit),
+    githubUrl: typeof data.githubUrl === "string" ? data.githubUrl : "",
     content,
   };
 }

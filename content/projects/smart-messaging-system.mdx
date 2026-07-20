@@ -1,137 +1,71 @@
 ---
-title: "Smart Messaging System : 고객 조회 성능 개선과 Redis 기반 수신자 관리"
+title: "Smart Messaging System : 마케터를 위한 AI 스마트 메시지 서비스"
 category: "Spring Boot / Redis (팀 프로젝트)"
-tags: ["Java", "Spring Boot", "Oracle", "MyBatis", "Redis", "RabbitMQ", "Performance"]
+projectCategory: "메시징"
+platforms: ["web"]
+role: "fullstack"
+tags: ["Java", "Spring Boot"]
 cover: "/images/projects/smart-messaging/member-list-after.png"
 coverAlt: "Smart Messaging System 고객 관리 화면과 Network 패널"
+githubUrl: "https://github.com/kosa-second-project/smart-messaging-system"
 date: "2026-07-10"
-lastModified: "2026-07-19"
-description: "고객 목록·상세 조회를 분리해 조회 부담을 줄이고, Redis Sorted Set으로 대량 수신자 선택 목록과 Selected 탭 페이징을 구성한 스마트 메시징 시스템 프로젝트입니다."
+lastModified: "2026-07-20"
+
 ---
 
-## Smart Messaging System
+## 프로젝트 개요
 
-Smart Messaging System은 마케터가 고객을 선택하고, 메시지를 작성·검토한 뒤 여러 채널로 발송하고 결과를 분석할 수 있도록 구성한 통합 메시징 시스템입니다. 고객 선택부터 메시지 발송, 통계 확인까지의 흐름을 하나의 서비스 안에서 이어지도록 설계했습니다.
+Smart Messaging System은 마케터가 고객을 선택하고, 메시지를 작성·검토한 뒤 여러 채널로 발송하고 결과를 분석할 수 있도록 구성한 통합 메시징 시스템입니다.
 
-**기간**: 2026.07  
-**구분**: 팀 프로젝트  
-**담당 범위**: 고객 관리 목록·상세 조회 성능 개선, 수신자 선택과 Redis Draft 저장, Selected 탭 하이브리드 페이징, 채널 라우팅·발송 API 연동·성과 지표 집계  
-**기술 스택**: Java, Spring Boot, Thymeleaf, Oracle, MyBatis, Redis, RabbitMQ
+- **기간**: 2026.07
+- **구분**: 팀 프로젝트
+- **담당 범위**: 고객 조회 성능 개선, Redis 기반 수신자 관리
+- **기술 스택**: Java, Spring Boot, Thymeleaf, Oracle, MyBatis, Redis, RabbitMQ
+- **주요 성과**:
+  - 고객 목록 API 요청 시간 1.99초 → 265ms (**86.7% 감소**), 전체 로드 시간 2.64초 → 564ms (**78.6% 감소**)
+  - 고객 정보 요청 8.46초 → 350ms (**95.9% 감소**), 응답 크기 268KB → 0.6KB (**99.8% 감소**)
+  - 메시지 이력 요청 5.03초 → 315ms (**93.7% 감소**), 상세 화면 전체 네트워크 완료 시간 11.02초 → 2.54초 (**77.0% 감소**)
 
-### 프로젝트에서 맡은 기능
+## 담당 기능
 
-- 고객 관리 목록 조회 성능 개선과 페이지네이션·태그 일괄 조회
-- 고객 상세 모달을 위한 단일 고객·메시지 이력 조회
-- 여러 검색 결과에서 누적 선택한 수신자 목록 관리
-- Redis Sorted Set 기반 Draft 저장과 TTL 관리
-- Redis에서 현재 페이지의 ID만 가져온 뒤 Oracle에서 상세 정보를 조회하는 하이브리드 페이징
-- 수신자별 수신 동의와 채널 우선순위에 따른 문자·카카오톡·메일 발송 채널 라우팅 및 Fallback 처리
-- 문자, 카카오톡, 메일 발송 API 연동과 채널별 발송 결과 기록
-- 추적 URL을 활용한 클릭·구매 전환 이벤트 집계 및 채널·템플릿별 클릭률·구매 전환율 분석
+- **고객 조회**: 고객 목록·상세 조회를 분리하고, 페이지네이션·태그 일괄 조회·메시지 이력 조회를 구현했습니다.
+- **수신자 관리**: 여러 검색 결과에서 누적 선택한 수신자를 Redis Draft에 저장하고, TTL과 Selected 탭 페이징을 관리했습니다.
 
-## 1. 고객 목록 조회 개선
+## 개발 기록
 
-### 문제 상황
+### 1. 고객 목록 조회 및 고객 상세 조회 성능 개선
 
-고객 관리 화면에 진입하면 고객 목록과 태그, 검색·필터 상태를 함께 조회합니다. 개선 전 측정 자료에서는 목록 요청의 소요 시간이 약 1.99초, 전체 로드 시간이 약 2.64초로 표시되었습니다.
-
-```text
-GET /api/customers/manage?page=1&size=10&sortOrder=latest
-```
-
-목록 화면에서는 현재 페이지에 필요한 고객 정보만 보여주면 되지만, 한 번의 목록 요청에 최근 발송일과 태그 등 여러 부가 정보가 함께 포함되어 있었습니다.
+- **문제 상황**: 초기에는 코드 재사용을 위해 고객 목록 API를 상세 모달에서도 사용했습니다. 상세 화면을 열 때 `size=1000`으로 전체 고객 목록을 다시 조회했고, 목록 쿼리에도 상세 화면에서만 필요한 최근 발송일과 태그 조회가 함께 포함되어 있었습니다.
 
 <figure className="not-prose">
   <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
-    <img
+    <ZoomableImage
       src="/images/projects/smart-messaging/member-list-before.png"
       alt="고객 목록 조회 개선 전 화면과 Chrome DevTools Network 패널"
       loading="lazy"
       className="h-auto w-full"
     />
   </div>
-  <figcaption>고객 목록 조회 개선 전 · 페이지 목록 요청과 Network 패널 · 출처: 사용자 제공 측정 자료</figcaption>
+  <figcaption>고객 목록 조회 개선 전 · 페이지 목록 요청과 Network 패널</figcaption>
 </figure>
 
 <figure className="not-prose md:max-w-3xl">
   <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
-    <img
-      src="/images/projects/smart-messaging/member-list-detail-before.png"
-      alt="고객 목록 조회 개선 전 Chrome DevTools Timing 패널의 서버 응답 대기 약 1.91초 측정 화면"
-      loading="lazy"
-      className="h-auto w-full"
-    />
-  </div>
-  <figcaption>고객 목록 조회 개선 전 Timing 패널 · 서버 응답 대기 약 1.91초 · 출처: 사용자 제공 측정 자료</figcaption>
-</figure>
-
-### 원인
-
-목록 API가 페이지 단위로 필요한 데이터뿐 아니라 최근 발송일처럼 비용이 큰 조회까지 함께 처리하고 있었습니다. 태그도 목록의 고객마다 별도로 조회되는 구조가 남아 있어, 고객 수가 늘어날수록 목록 요청에 포함되는 작업이 커질 수 있었습니다.
-
-### 해결 과정
-
-목록 조회는 페이지에 표시할 고객을 먼저 조회하고, 현재 페이지의 고객 ID를 모아 태그를 한 번에 조회하도록 변경했습니다. 상세 화면에서만 필요한 최근 발송일은 목록 조회에서 제외하고, 고객 상세 조회 시점에 가져오도록 조회 책임을 나눴습니다.
-
-<figure className="not-prose">
-  <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
-    <img
-      src="/images/projects/smart-messaging/member-list-after.png"
-      alt="고객 목록 조회 개선 후 화면과 Chrome DevTools Network 패널"
-      loading="lazy"
-      className="h-auto w-full"
-    />
-  </div>
-  <figcaption>고객 목록 조회 개선 후 · 페이지 단위 조회로 변경된 화면 · 출처: 사용자 제공 측정 자료</figcaption>
-</figure>
-
-### 측정 결과
-
-제공한 목록 조회 자료를 기준으로 요청 소요 시간은 약 1.99초에서 265ms로, 전체 로드 시간은 약 2.64초에서 564ms로 줄었습니다. 측정 화면의 네트워크 조건과 실행 시점이 완전히 동일한지는 확인할 수 없으므로, 이 수치는 제공된 전·후 화면에 표시된 값으로 기록했습니다.
-
-## 2. 고객 상세 조회 개선
-
-### 문제 상황
-
-고객 목록에서 한 고객을 클릭하면 상세 모달이 열립니다. 기존에는 상세 정보를 가져오기 위해 단일 고객 API를 호출하지 않고, 고객 관리 목록 API를 `size=1000`으로 다시 호출한 뒤 응답 목록에서 선택한 고객을 찾았습니다.
-
-```text
-GET /api/customers/manage?page=1&size=1000&name=&phone=
-```
-
-상세 모달 하나를 열기 위해 전체 고객 목록을 다시 조회하면서 응답 크기는 약 268KB, 서버 응답 대기 시간은 8.45초, 전체 요청 시간은 8.46초로 측정되었습니다.
-
-<figure className="not-prose">
-  <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
-    <img
+    <ZoomableImage
       src="/images/projects/smart-messaging/member-detail-network-before.png"
       alt="고객 상세 모달을 열 때 size=1000 고객 목록 요청이 발생하는 개선 전 화면"
       loading="lazy"
       className="h-auto w-full"
     />
   </div>
-  <figcaption>고객 상세 조회 개선 전 · 전체 목록 API를 다시 호출하는 Network 패널 · 출처: 사용자 제공 측정 자료</figcaption>
+  <figcaption>고객 상세 조회 개선 전 · 전체 목록 API를 다시 호출하는 Network 패널</figcaption>
 </figure>
 
-<figure className="not-prose md:max-w-md">
-  <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
-    <img
-      src="/images/projects/smart-messaging/member-detail-before.png"
-      alt="고객 상세 조회 개선 전 Chrome DevTools Timing 패널의 서버 응답 대기 8.45초 측정 화면"
-      loading="lazy"
-      className="h-auto w-full"
-    />
-  </div>
-  <figcaption>개선 전 Timing 패널 · 서버 응답 대기 8.45초, 전체 8.46초 · 출처: 사용자 제공 측정 자료</figcaption>
-</figure>
+- **해결 과정**: 조회 목적에 따라 목록과 상세를 분리했습니다. 목록은 현재 페이지에 필요한 고객 정보만 조회하도록 바꾸고, 목록 쿼리에서 상세 전용 `lastSend` 서브쿼리를 제거했습니다. count 쿼리에서도 건수 계산에 필요하지 않은 채널 동의 집계 조인을 제외했습니다.
 
-### 원인
+기존에는 MyBatis `ResultMap`의 중첩 `collection select`로 고객별 태그를 조회해, 목록의 고객 수만큼 추가 쿼리가 발생하는 N+1 조회 문제가 생겼습니다. 현재 페이지의 고객 ID를 모아 `IN` 조건으로 한 번에 조회한 뒤 서비스 계층에서 고객별로 그룹화하는 방식으로 변경했습니다.
 
-목록 API와 상세 API가 같은 조회 목적을 처리하고 있었습니다. 상세 모달은 고객 한 명의 정보와 메시지 이력만 필요했지만, 실제로는 목록 화면 전체를 구성하는 API를 재사용하고 있었습니다.
-
-### 해결 과정
-
-상세 모달을 위한 단일 고객 API를 추가했습니다. 프론트엔드는 목록에서 고객 ID를 이미 알고 있으므로, 전체 목록을 다시 가져오는 대신 고객 ID와 메시지 이력을 각각 필요한 범위로 요청하도록 변경했습니다.
+상세 모달에는 `GET /api/customers/{customerId}` 단일 고객 API를 추가했습니다. 프론트엔드는 고객 정보와 메시지 이력을 `Promise.all`로 병렬 요청하고, 이력 조회는 최근 90일·최대 40건으로 제한했습니다. 이력에 포함되던 실패 사유 서브쿼리도 제거해 상세 화면에 필요한 범위만 조회하도록 했습니다.
 
 ```javascript
 Promise.all([
@@ -140,55 +74,34 @@ Promise.all([
 ]);
 ```
 
-서버에는 `GET /api/customers/{customerId}`를 추가하고 `selectCustomerById` 쿼리를 분리했습니다. 목록 조회에서는 최근 발송일을 상세 조회 시점으로 미루고, 태그는 현재 페이지의 고객 ID를 모아 한 번에 조회한 뒤 고객별로 그룹화했습니다. 메시지 이력은 최근 90일, 최대 40건으로 범위를 제한했습니다.
+<figure className="not-prose">
+  <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
+    <ZoomableImage
+      src="/images/projects/smart-messaging/member-list-after.png"
+      alt="고객 목록 조회 개선 후 화면과 Chrome DevTools Network 패널"
+      loading="lazy"
+      className="h-auto w-full"
+    />
+  </div>
+  <figcaption>고객 목록 조회 개선 후 · 페이지 단위 조회로 변경된 화면</figcaption>
+</figure>
 
 <figure className="not-prose">
   <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
-    <img
+    <ZoomableImage
       src="/images/projects/smart-messaging/member-detail-after.png"
       alt="고객 상세 조회 개선 후 상세 모달과 Chrome DevTools Network 패널"
       loading="lazy"
       className="h-auto w-full"
     />
   </div>
-  <figcaption>고객 상세 조회 개선 후 · 고객 정보와 메시지 이력을 필요한 범위로 조회한 화면 · 출처: 사용자 제공 측정 자료</figcaption>
+  <figcaption>고객 상세 조회 개선 후 · 고객 정보와 메시지 이력을 필요한 범위로 조회한 화면</figcaption>
 </figure>
 
-### 측정 결과
+- **결과**: 목록 API는 약 1.99초에서 265ms로 86.7%, 전체 로드 시간은 2.64초에서 564ms로 78.6% 줄었습니다. MyBatis 태그 조회도 고객별 추가 조회에서 현재 페이지 기준 일괄 조회로 바뀌어 N+1 쿼리 발생 가능성을 제거했습니다. 상세 화면에서는 고객 정보 요청이 8.46초·268KB에서 350ms·0.6KB로 줄었고, 메시지 이력 요청은 5.03초에서 315ms로 감소했습니다.
 
-개선 전에는 전체 목록 API 재호출에 8.46초가 걸렸습니다. 개선 후 자료에서는 고객 상세 정보 요청이 약 350ms, 메시지 이력 요청이 약 315ms로 표시되며, 전체 로드는 약 2.54초로 나타납니다. 두 측정이 완전히 동일한 조건에서 수행되었는지는 확인할 수 없으므로, 이 수치를 단일한 개선율로 단정하기보다 상세 조회를 목록 조회와 분리한 구조적 변화와 함께 기록했습니다.
 
-목록과 상세의 응답 범위를 분리하면서 화면에 당장 필요한 데이터만 조회하게 되었고, 상세 모달을 열기 위해 대량 목록을 재요청하던 흐름도 제거했습니다. 이 변경은 `CustomerApiController`, `CustomerServiceImpl`, `CustomerMapper.xml`, `customers.js`에 반영되어 있습니다.
-
-## 3. Redis로 수신자 선택 목록을 임시 저장한 이유
-
-### 문제 상황
-
-수신자 선택 화면에서는 한 번의 검색 결과만 선택하는 것이 아니라, 검색 조건과 페이지를 바꿔가며 고객을 계속 추가하거나 제거할 수 있어야 했습니다. 따라서 현재 검색 결과와 별개로 누적된 선택 목록을 유지해야 했습니다.
-
-선택한 고객 ID 전체를 브라우저에 저장하면 페이지 이동이나 다음 단계 요청마다 큰 배열을 함께 보내야 합니다. 반대로 아직 발송을 확정하지 않은 선택 목록을 Oracle에 계속 저장하면 임시 데이터가 영속 데이터와 섞이고, 사용자가 중간에 이탈했을 때 정리해야 할 데이터가 남습니다.
-
-### 해결 과정
-
-브라우저에는 전체 고객 ID 대신 `draftId`만 두고, 서버에서 사용자와 Draft별로 Redis 자료구조를 관리했습니다.
-
-```text
-Browser
-  └─ draftId만 보관
-       ↓
-Spring Boot Draft API
-  ├─ 선택 고객 추가·삭제
-  ├─ 대량 적재 상태 관리
-  └─ TTL 갱신
-       ↓
-Redis
-  ├─ Sorted Set: 고객 ID와 선택 순서
-  └─ Hash: PROCESSING / READY / FAILED 상태
-       ↓
-Oracle
-  └─ 화면에 표시할 고객 상세 정보
-```
-
+### 2. Redis Draft 기반 대량 수신자 처리
 <figure className="not-prose">
   <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
     <video
@@ -202,75 +115,17 @@ Oracle
       브라우저에서 영상을 재생할 수 없습니다.
     </video>
   </div>
-  <figcaption>Redis Draft 적재 과정 · 선택한 고객 ID가 Redis에 저장되는 화면 · 출처: 사용자 제공 참고 영상</figcaption>
+  <figcaption>Redis Draft 적재 과정 · 선택한 고객 ID가 Redis에 저장되는 화면</figcaption>
 </figure>
 
-사용한 키는 다음과 같이 나눴습니다.
 
-| 키 | 자료구조 | 역할 |
-| --- | --- | --- |
-| `draft:recipient:{userId}:{draftId}` | Sorted Set | 고객 ID와 선택 순서 저장 |
-| `draft:recipient:status:{userId}:{draftId}` | Hash | 대량 적재 상태와 개수 저장 |
+- **문제 상황**: 수신자는 여러 검색 조건과 페이지를 오가며 누적 선택할 수 있어야 했습니다. <br/>초기에는 선택한 회원 ID 전체를 localStorage에 저장했지만, 대량 데이터를 직렬화·저장·조회하는 동안 브라우저 메인 스레드를 점유하면서 속도 저하를 느꼈습니다. 또한 고객 식별자 목록을 클라이언트 저장소에 보관하는 보안 부담도 있었습니다. 그렇다고 발송 여부가 확정되지 않은 임시 목록을 DB에 저장하면 불필요한 Insert·Delete와 데이터 정리 문제가 발생할 수 있었습니다.
 
-Sorted Set에서는 고객 ID를 member로, 누적 선택 순서를 score로 저장했습니다. 그래서 같은 고객의 중복 선택을 막으면서 `ZRANGE`로 현재 페이지의 ID만 가져오고, `ZCARD`로 전체 선택 수를 계산하고, `ZREM`으로 선택 해제를 처리할 수 있었습니다.
+- **해결 과정**: 브라우저에는 전체 고객 ID 대신 Redis Draft를 식별하는 `draftId`만 두고, 사용자 선택 상태를 Redis에 임시 저장했습니다. Redis 자료구조로 Sorted Set을 선택한 이유는 선택 순서를 `score`로 저장하면서 고객 ID를 중복 없이 관리하고, 정렬된 목록을 범위 단위로 조회할 수 있기 때문입니다. 신규 선택 고객에는 순차적인 score를 부여하고, 데이터 적재 상태는 별도의 Hash 키로 관리했으며 두 키에 30분 TTL을 적용했습니다.
 
-```java
-long start = (long) (page - 1) * size;
-long end = start + size - 1;
 
-Set<Object> ids = redisTemplate.opsForZSet().range(key, start, end);
-Long totalCount = redisTemplate.opsForZSet().size(key);
-```
+Selected 탭은 Sorted Set의 `ZRANGE`로 현재 페이지에 필요한 고객 ID만 조회한 뒤, 해당 ID의 상세 정보만 Oracle에서 가져오도록 구성했습니다. 이를 통해 검색 조건이 바뀌어도 누적 선택 순서를 유지하면서 페이지 단위로 목록을 조회해 성능을 확보했고, 전체 선택 수는 Redis `ZCARD`로 계산해 페이지 수가 어긋나지 않도록 했습니다.
 
-대량 선택 요청은 1,000개 단위로 나누고 `executePipelined`로 Redis에 전달했습니다. Pipeline은 여러 명령을 하나의 트랜잭션으로 만드는 기능이 아니라, 각 명령의 응답을 기다리며 발생하는 네트워크 왕복을 줄이는 방식입니다. 따라서 청크 크기를 무한히 키우지 않고 Redis 응답 버퍼와 처리 시간을 함께 고려해야 합니다.
+대량 선택 요청은 전체 목록을 한 번에 Redis에 전달하지 않도록 1,000개 단위의 청크로 나누고, Spring Data Redis의 `executePipelined`를 활용해 Sorted Set에 적재했습니다. 이를 통해 Redis 명령의 네트워크 왕복을 줄였습니다.
 
-## 4. Selected 탭에서 Redis와 Oracle을 함께 사용한 방식
-
-Selected 탭은 현재 검색 조건이 아니라 지금까지 누적한 선택 목록을 기준으로 보여줘야 합니다. 그래서 일반 필터 탭과 동일한 Oracle 페이징만으로는 요구사항을 표현하기 어려웠습니다.
-
-```text
-1. Redis ZSet에서 현재 페이지의 Customer ID만 조회
-2. Redis ZSet의 전체 크기로 totalCount 계산
-3. 해당 ID 목록만 Oracle에 전달해 고객 상세 정보 조회
-4. Oracle content와 Redis totalCount를 조합해 응답
-```
-
-컨트롤러에서도 `activeTab=selected`와 `draftId`가 있을 때만 이 흐름으로 분기합니다. Oracle은 이름·전화번호·동의 여부·태그 같은 고객 상세 정보를 담당하고, Redis는 누적 선택 순서와 페이지 범위를 담당하도록 역할을 분리했습니다.
-
-이때 DB 조회 결과의 `totalCount`를 그대로 사용하면 안 됩니다. DB에는 현재 페이지의 ID만 `IN` 조건으로 전달되므로 전체 선택 수가 아니라 현재 페이지의 수만 계산되기 때문입니다. 최종 응답에서는 Redis의 `ZCARD` 결과를 `totalCount`로 사용해 페이지 수가 어긋나지 않도록 했습니다.
-
-## 5. 정리하며
-
-이번 프로젝트에서 성능 개선은 특정 기술을 추가하는 일보다, 요청의 목적에 맞게 조회 범위와 데이터 책임을 나누는 과정에 가까웠습니다. 고객 상세 조회는 단일 ID API로 분리하고, 목록은 페이지 단위로 제한했습니다. 수신자 선택 목록은 Redis에 임시로 보관하되, 고객의 기준 정보는 Oracle에서 조회했습니다.
-
-Redis Draft에는 30분 TTL을 적용하고 발송 완료·취소 시 명시적으로 삭제하도록 구성했습니다. 다만 현재 `max score`를 읽은 뒤 다음 score를 계산하고 `ZADD`하는 과정은 하나의 원자적 연산으로 묶여 있지 않으므로, 엄격한 동시 선택 순서가 필요한 환경에서는 Lua Script나 별도 sequence 전략을 추가로 검토해야 합니다.
-
-이 경험을 통해 Redis를 단순히 빠른 저장소로 선택하기보다, 자료구조가 화면의 조회 방식과 데이터 만료 정책에 어떤 영향을 주는지 함께 설계해야 한다는 점을 배웠습니다.
-
-## 관련 기록과 출처
-
-### 프로젝트 코드
-
-- [Smart Messaging System 저장소](https://github.com/kosa-second-project/smart-messaging-system)
-- [고객 API 컨트롤러](https://github.com/kosa-second-project/smart-messaging-system/blob/feature/71-message_link/src/main/java/com/example/smartmessaging/controller/CustomerApiController.java)
-- [고객 조회 서비스](https://github.com/kosa-second-project/smart-messaging-system/blob/feature/71-message_link/src/main/java/com/example/smartmessaging/service/impl/CustomerServiceImpl.java)
-- [고객 MyBatis 매퍼](https://github.com/kosa-second-project/smart-messaging-system/blob/feature/71-message_link/src/main/resources/mappers/CustomerMapper.xml)
-- [고객 관리 화면 코드](https://github.com/kosa-second-project/smart-messaging-system/blob/feature/71-message_link/src/main/resources/static/js/pages/customers.js)
-- [Redis Draft 서비스](https://github.com/kosa-second-project/smart-messaging-system/blob/feature/71-message_link/src/main/java/com/example/smartmessaging/service/impl/CampaignDraftServiceImpl.java)
-- [Redis 설정](https://github.com/kosa-second-project/smart-messaging-system/blob/feature/71-message_link/src/main/java/com/example/smartmessaging/config/RedisConfig.java)
-
-### 프로젝트 문서
-
-- [스마트 메시징 시스템 발표자료](https://docs.google.com/presentation/d/117aK_fV3BjjkKupu1nDWquCfGNlq02i8ZOrlH4hSmqw/edit)
-- [스마트 메시징 시스템 대용량 처리 성능 최적화](https://app.notion.com/p/39e2095ffa9481d6a137e06ad146df95)
-- [Redis Draft 기반 수신자 임시 저장 아키텍처](https://app.notion.com/p/39e2095ffa94813784c1c38109e882d8)
-- [Selected 탭 페이징: Redis-RDB 하이브리드 조회](https://app.notion.com/p/39e2095ffa94816fa6fcef43253f400d)
-
-### 공식 문서
-
-- [Redis Sorted Sets](https://redis.io/docs/latest/develop/data-types/sorted-sets/)
-- [Redis Pipelining](https://redis.io/docs/latest/develop/using-commands/pipelining/)
-- [Redis data types](https://redis.io/docs/latest/develop/data-types/)
-- [Spring Data Redis - RedisTemplate](https://docs.spring.io/spring-data/redis/reference/3.5/redis/template.html)
-
-> 이미지 출처: 별도 표기가 없는 성능 화면은 모두 사용자가 제공한 프로젝트 측정 자료입니다. 실제 서비스 화면이나 성능 수치를 재현해 생성한 이미지는 사용하지 않았습니다.
+- **결과**: 선택 상태·순서·중복 제거·페이지 조회·만료를 Redis에서 처리하면서 브라우저와 DB의 부담을 줄이고 빠르게 데이터를 주고 받을 수 있었습니다. 대량 선택 데이터를 청크 단위로 처리해 Redis 요청 크기와 임시 데이터 관리 부담을 제한할 수 있었습니다.
