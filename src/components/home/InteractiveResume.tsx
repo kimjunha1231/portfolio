@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
@@ -65,7 +66,7 @@ export default function InteractiveResume() {
           </div>
         </div>
 
-        {/* 2. 프로젝트 (Projects) - 최신순 정렬 완료 */}
+        {/* 2. 프로젝트 (Projects) - 프론트엔드 중심으로 선별 */}
         <div data-reveal-resume className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-3">
             <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-accent-blue flex items-center gap-2 sticky top-24 font-bold">
@@ -76,7 +77,11 @@ export default function InteractiveResume() {
 
           <div className="lg:col-span-9 space-y-12 pl-2 border-l border-accent-blue/15">
             {/* JobSecretary (2025.11 ~ 2025.12) */}
-            <div className="relative pl-6 group">
+            <Link
+              href="/projects/jobsecretary"
+              aria-label="JobSecretary 프로젝트 상세 페이지"
+              className="relative block rounded-lg pl-6 pr-2 py-1 -my-1 group transition-colors hover:bg-accent-blue/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            >
               <div className="absolute -left-[5px] top-2.5 w-2 h-2 rounded-full bg-accent-blue group-hover:scale-150 transition-transform" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <h4 className="text-lg font-semibold text-foreground group-hover:text-accent-blue transition-colors">
@@ -84,19 +89,23 @@ export default function InteractiveResume() {
                 </h4>
                 <span className="text-xs font-mono text-foreground/70 bg-foreground/5 px-2.5 py-0.5 rounded-full border border-card-border">2025.11 ~ 2025.12</span>
               </div>
-              <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">Next.js 15, TypeScript, Zustand, TanStack Query, Gemini API, Supabase, Jest</p>
+              <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">Next.js 15, TypeScript, React Hook Form, TanStack Query, Zustand, Gemini API, Supabase</p>
               <p className="text-xs font-normal text-foreground/90 leading-relaxed mb-3">
-                자기소개서 작성, 공고 관리, PDF 변환, 면접 질문 생성 등 파편화된 취업 준비 과정을 하나로 통합한 플랫폼입니다.
+                채용 공고와 지원 현황, 자기소개서, PDF 변환, AI 면접 질문 생성을 하나의 흐름으로 연결한 취업 준비 관리 서비스입니다.
               </p>
               <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-1.5">
-                <li><strong>칸반보드 렌더링 최적화</strong>: Render Props 및 Portal 아키텍처 도입으로 불필요한 카드 리렌더링 268회에서 0회로 원천 격리 (커밋 64% 감소)</li>
-                <li><strong>폼 성능 개선</strong>: 타이핑 성능 저하를 방지하기 위해 React Hook Form 비제어 방식 적용 및 이탈 방지 모달 UX 연계</li>
-                <li><strong>FSD 도입</strong>: Widgets 계층 신설을 통해 의존성 원칙을 준수하고 기능별 레이어 결합성을 높임</li>
+                <li><strong>칸반 렌더링 최적화</strong>: React Developer Tools Profiler에서 동일한 드래그 시나리오를 비교해 전체 커밋 271회에서 98회, 비활성 카드 리렌더링 268회에서 0회로 감소</li>
+                <li><strong>작성 흐름 안정화</strong>: React Hook Form의 비제어 입력과 isDirty 기반 이탈 경고로 폼 입력과 서버 저장 시점을 분리</li>
+                <li><strong>구조 설계</strong>: App·Widgets·Features·Entities·Shared 계층으로 페이지 조립, 사용자 기능, 도메인 모델의 책임과 의존성 방향을 정리</li>
               </ul>
-            </div>
+            </Link>
 
             {/* Dearfam (2024.11 ~ 2025.09) */}
-            <div className="relative pl-6 group">
+            <Link
+              href="/projects/dearfam"
+              aria-label="Dearfam 프로젝트 상세 페이지"
+              className="relative block rounded-lg pl-6 pr-2 py-1 -my-1 group transition-colors hover:bg-accent-blue/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            >
               <div className="absolute -left-[5px] top-2.5 w-2 h-2 rounded-full bg-accent-blue group-hover:scale-150 transition-transform" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <h4 className="text-lg font-semibold text-foreground group-hover:text-accent-blue transition-colors">
@@ -104,19 +113,23 @@ export default function InteractiveResume() {
                 </h4>
                 <span className="text-xs font-mono text-foreground/70 bg-foreground/5 px-2.5 py-0.5 rounded-full border border-card-border">2024.11 ~ 2025.09</span>
               </div>
-              <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">React, TypeScript, Zustand, TanStack Query, Tailwind CSS, Flutter</p>
+              <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">React, TypeScript, Zustand, TanStack Query, MSW, Tailwind CSS</p>
               <p className="text-xs font-normal text-foreground/90 leading-relaxed mb-3">
-                AI 그림일기 생성 및 사진 캐릭터화 실물 앨범 제작 서비스입니다.
+                Flutter MVP를 React·TypeScript 웹 서비스로 전환한 AI 가족 추억 앨범 서비스입니다.
               </p>
               <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-1.5">
-                <li><strong>React 웹 마이그레이션</strong>: 모바일 하이브리드 앱(Flutter) MVP에서 웹 전용 React 스택으로 전면 마이그레이션하여 사용자 접근성 및 FCP 개선</li>
-                <li><strong>페이지 응집도 설계</strong>: 페이지별 개별 components/hooks 분리 아키텍처를 도입하여 코드 충돌 최소화 및 유지보수 효율 극대화</li>
-                <li>2024 클라우드 아이디어 공모전 대상(부산시장상) 수상 및 숭실캡스톤디자인 경진대회 장려상</li>
+                <li><strong>웹 전환</strong>: Flutter MVP를 React·TypeScript로 마이그레이션하고 Zustand와 TanStack Query로 클라이언트·서버 상태를 분리</li>
+                <li><strong>협업 개발 기반</strong>: MSW로 가족·게시글·댓글·인증 API를 모킹해 백엔드 구현 전에도 주요 화면과 응답 상태를 검증</li>
+                <li><strong>서비스 성과</strong>: 2024 클라우드 아이디어 공모전 대상(부산시장상), 숭실캡스톤디자인 장려상, Pre-스타트업 선정</li>
               </ul>
-            </div>
+            </Link>
 
             {/* TITO (2024.03 ~ 2024.12) */}
-            <div className="relative pl-6 group">
+            <Link
+              href="/projects/tito"
+              aria-label="TITO 프로젝트 상세 페이지"
+              className="relative block rounded-lg pl-6 pr-2 py-1 -my-1 group transition-colors hover:bg-accent-blue/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            >
               <div className="absolute -left-[5px] top-2.5 w-2 h-2 rounded-full bg-accent-blue group-hover:scale-150 transition-transform" />
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                 <h4 className="text-lg font-semibold text-foreground group-hover:text-accent-blue transition-colors">
@@ -124,16 +137,16 @@ export default function InteractiveResume() {
                 </h4>
                 <span className="text-xs font-mono text-foreground/70 bg-foreground/5 px-2.5 py-0.5 rounded-full border border-card-border">2024.03 ~ 2024.12</span>
               </div>
-              <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">Flutter, Dart, DIO, Retrofit, Firebase Realtime Database, WebSocket</p>
+              <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">Flutter, Dart, Riverpod, Dio, Retrofit, WebSocket, Firebase Messaging</p>
               <p className="text-xs font-normal text-foreground/90 leading-relaxed mb-3">
-                LLM RAG 기술을 적용한 AI 말투 교정 및 실시간 토론 보조 애플리케이션입니다.
+                LLM 기반 주제 생성·주장 코칭과 WebSocket 기반 실시간 토론·투표·관전을 제공하는 Flutter 앱입니다.
               </p>
               <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-1.5">
-                <li><strong>통신 최적화</strong>: 실시간 채팅(웹소켓)과 정보 갱신(REST API) 채널을 물리 분리하여 초기 로딩 부하 및 데이터 꼬임 현상 해결</li>
-                <li><strong>이미지 캐싱</strong>: CachedNetworkImage를 탑재하여 대화 참여자 프로필 재요청을 차단하고 렌더링 성능 최적화</li>
-                <li>2024 한이음 ICT멘토링 공모전 은상(정보통신기획평가원장상) 및 원스토어 정식 출시 배포 완료</li>
+                <li><strong>통신 흐름 분리</strong>: 토론방 기본 정보·기존 내역은 REST API, 채팅·턴 상태·관전자 댓글·투표는 WebSocket으로 분리해 초기 데이터와 실시간 이벤트의 처리 순서를 정리</li>
+                <li><strong>앱 상태 관리</strong>: Riverpod으로 토론·인증·알림 상태를 분리하고 Dio·Retrofit으로 인증·토론 API를 연동</li>
+                <li><strong>서비스 출시</strong>: 2024 한이음 ICT멘토링 프로젝트 은상(정보통신기획평가원장상) 수상 및 One Store·App Store 배포 경험</li>
               </ul>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -150,10 +163,10 @@ export default function InteractiveResume() {
               <div>
                 <h4 className="text-base font-semibold text-foreground">현대퓨처넷 11기 MSA기반 Full Stack 개발 전문가 양성과정</h4>
                 <p className="text-xs text-foreground/90 mt-2 leading-relaxed">
-                  현대퓨처넷 수습생으로 마이크로서비스 아키텍처(MSA) 기반 풀스택 소프트웨어 개발 양성 실무 교육을 이수 중입니다.
+                  현대퓨처넷 교육생으로 마이크로서비스 아키텍처(MSA) 기반 풀스택 소프트웨어 개발 양성 실무 교육을 이수 중입니다.
                 </p>
               </div>
-              <span className="text-xs font-mono text-foreground/50 self-start">2026.04 ~ 현재 (4개월)</span>
+              <span className="text-xs font-mono text-foreground/50 self-start">2026.04 ~ 현재</span>
             </div>
           </div>
         </div>
