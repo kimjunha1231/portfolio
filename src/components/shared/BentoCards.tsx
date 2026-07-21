@@ -1,19 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar } from "lucide-react";
-import {
-  PROJECT_PLATFORM_LABELS,
-  PROJECT_ROLE_LABELS,
-  type ProjectPlatform,
-  type ProjectRole,
-} from "@/lib/project-taxonomy";
 
 export interface BentoCardItem {
   slug: string;
   title: string;
   category: string;
-  platforms?: ProjectPlatform[];
-  role?: ProjectRole;
+  metaItems?: Array<{ label: string; value: string }>;
   description: string;
   tags: string[];
   cover?: string;
@@ -74,7 +67,6 @@ interface BentoCardsProps {
   sectionLabel: string;
   detailLabel: string;
   actionLabel: string;
-  showCategory?: boolean;
 }
 
 export default function BentoCards({
@@ -83,7 +75,6 @@ export default function BentoCards({
   sectionLabel,
   detailLabel,
   actionLabel,
-  showCategory = true,
 }: BentoCardsProps) {
   return (
     <section
@@ -106,11 +97,9 @@ export default function BentoCards({
 
               <div className="flex min-h-[285px] flex-col p-6 md:p-8">
                 <div className="flex items-start justify-between gap-4">
-                  {showCategory && (
-                    <span className="rounded-full bg-accent-blue/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.1em] text-accent-blue dark:bg-accent-blue/20">
-                      {item.category}
-                    </span>
-                  )}
+                  <span className="rounded-full bg-accent-blue/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.1em] text-accent-blue dark:bg-accent-blue/20">
+                    {item.category}
+                  </span>
                   <span className="font-mono text-[10px] text-foreground/40">
                     {String(index + 1).padStart(2, "0")}
                   </span>
@@ -120,41 +109,23 @@ export default function BentoCards({
                   {item.title}
                 </h2>
 
-                {(item.platforms?.length || item.role) && (
+                {item.metaItems?.length ? (
                   <div
                     className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-card-border/70 py-3"
-                    aria-label="프로젝트 플랫폼과 담당 역할"
+                    aria-label={`${item.title} 메타데이터`}
                   >
-                    {item.platforms && item.platforms.length > 0 && (
-                      <div className="flex items-center gap-2">
+                    {item.metaItems.map((metaItem) => (
+                      <div key={metaItem.label} className="flex items-center gap-2">
                         <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/40">
-                          Platform
+                          {metaItem.label}
                         </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {item.platforms.map((platform) => (
-                            <span
-                              key={platform}
-                              className="rounded-full border border-foreground/10 px-2.5 py-1 text-[10px] font-mono text-foreground/70"
-                            >
-                              {PROJECT_PLATFORM_LABELS[platform]}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {item.role && (
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-foreground/40">
-                          Role
-                        </span>
-                        <span className="rounded-full bg-accent-blue/10 px-2.5 py-1 text-[10px] font-mono text-accent-blue dark:bg-accent-blue/20">
-                          {PROJECT_ROLE_LABELS[item.role]}
+                        <span className="rounded-full border border-foreground/10 px-2.5 py-1 text-[10px] font-mono text-foreground/70">
+                          {metaItem.value}
                         </span>
                       </div>
-                    )}
+                    ))}
                   </div>
-                )}
+                ) : null}
 
                 <p className="mt-3 min-h-[4.5rem] text-sm font-light leading-relaxed text-foreground/70 line-clamp-3">
                   {item.description}

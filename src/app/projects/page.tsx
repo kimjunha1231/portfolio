@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import StructuredData from "@/components/shared/StructuredData";
 import { getAllPosts, getLatestLastModified } from "@/lib/mdx";
 import {
+  PROJECT_PLATFORM_LABELS,
   PROJECT_ROLE_LABELS,
   PROJECT_ROLES,
   type ProjectRole,
@@ -12,12 +13,12 @@ import {
 import { SITE_DESCRIPTION, SITE_LAST_MODIFIED, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "프로젝트 쇼케이스",
+  title: "프로젝트",
   description:
     "Next.js, React, Flutter, AI, 실시간 통신과 웹 성능 최적화를 적용한 김준하의 프로젝트 케이스 스터디 모음입니다.",
   alternates: { canonical: "/projects" },
   openGraph: {
-    title: "프로젝트 쇼케이스 | 김준하",
+    title: "프로젝트 | 김준하",
     description:
       "프론트엔드와 풀스택 개발, AI 서비스, 웹 성능 최적화 프로젝트를 소개합니다.",
     type: "website",
@@ -112,8 +113,21 @@ export default async function ProjectsListPage({ searchParams }: ProjectsListPag
     slug: project.slug,
     title: project.title,
     category: project.projectCategory || project.category || "Project Case Study",
-    platforms: project.platforms,
-    role: project.role,
+    metaItems: [
+      ...(project.platforms?.length
+        ? [
+            {
+              label: "Platform",
+              value: project.platforms
+                .map((platform) => PROJECT_PLATFORM_LABELS[platform])
+                .join(" · "),
+            },
+          ]
+        : []),
+      ...(project.role
+        ? [{ label: "Role", value: PROJECT_ROLE_LABELS[project.role] }]
+        : []),
+    ],
     description: project.description || "김준하의 프로젝트 기술 사례입니다.",
     tags: project.tags || [],
     cover: project.cover,
@@ -132,9 +146,9 @@ export default async function ProjectsListPage({ searchParams }: ProjectsListPag
         data={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          "@id": `${SITE_URL.toString()}/projects#collection`,
+          "@id": new URL("/projects#collection", SITE_URL).toString(),
           url: new URL("/projects", SITE_URL).toString(),
-          name: "프로젝트 쇼케이스",
+          name: "프로젝트",
           description: SITE_DESCRIPTION,
           dateModified: getLatestLastModified(visiblePosts, SITE_LAST_MODIFIED),
           isPartOf: { "@id": `${SITE_URL.toString()}#website` },
@@ -150,20 +164,16 @@ export default async function ProjectsListPage({ searchParams }: ProjectsListPag
         }}
       />
 
-      <h1 id="projects-heading" className="sr-only">
-        프로젝트 쇼케이스
-      </h1>
-
-      <div className="mb-12 px-6 md:px-12 lg:px-24">
+      <div className="mb-12">
         <div className="mx-auto max-w-7xl">
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/50">
-            Selected work
+            Project
           </span>
-          <h2 className="mt-3 text-3xl font-light tracking-tight md:text-5xl">
-            프로젝트를 담당 역할로 나눠 확인할 수 있습니다.
-          </h2>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-foreground/60">
-            각 프로젝트에서 제가 맡은 역할을 기준으로 프로젝트를 살펴볼 수 있습니다.
+          <h1 id="projects-heading" className="mt-2 text-4xl font-light leading-none tracking-tight md:text-6xl">
+            Project
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm font-light leading-relaxed text-foreground/60">
+            프로젝트별 문제 정의, 담당 역할, 기술적 선택과 결과를 케이스 스터디로 정리했습니다.
           </p>
 
           <div className="mt-8 space-y-4" aria-label="프로젝트 필터">

@@ -52,6 +52,9 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
     slug: post.slug,
     title: post.title,
     category: post.category || "기술 기록",
+    metaItems: [
+      { label: "Section", value: post.section || "기술 기록" },
+    ],
     description: post.description || "프론트엔드와 웹 개발에 대한 기술 기록입니다.",
     tags: post.tags || [],
     cover: post.cover,
@@ -71,7 +74,7 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
         data={{
           "@context": "https://schema.org",
           "@type": "CollectionPage",
-          "@id": `${SITE_URL.toString()}/blog#collection`,
+          "@id": new URL("/blog#collection", SITE_URL).toString(),
           url: new URL("/blog", SITE_URL).toString(),
           name: "기술 블로그",
           description: SITE_DESCRIPTION,
@@ -88,46 +91,55 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
           },
         }}
       />
-      
+
       {/* Top Header */}
       <div>
-        
-        <div className="mb-16">
-          <span className="text-[10px] uppercase tracking-[0.25em] font-mono text-foreground/50">Journal</span>
+
+        <div className="mb-12">
+          <span className="text-[10px] uppercase tracking-[0.25em] font-mono text-foreground/50">Tech Blog</span>
           <h1 id="blog-heading" className="text-4xl md:text-6xl font-light tracking-tight mt-2 leading-none">
-            Technical <span className="font-serif italic text-accent-blue">Insights</span>
+            Tech <span className=" text-accent-blue">Blog</span>
           </h1>
-          <p className="text-sm font-light text-foreground/60 mt-4 max-w-md leading-relaxed">
+          <p className="mt-4 max-w-2xl text-sm font-light leading-relaxed text-foreground/60">
             프론트엔드와 웹 애니메이션 최적화, 풀스택 아키텍처 구현 과정에서 얻은 깊이 있는 고찰과 기록입니다.
           </p>
 
-          <nav aria-label="블로그 분류" className="mt-8 flex flex-wrap gap-2">
-            {BLOG_SECTIONS.map((section) => {
-              const isSelected = section.key === selectedSection;
-              const href = section.key === "all" ? "/blog" : `/blog?section=${section.key}`;
+          <div className="mt-8 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <span className="w-20 shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/45">
+              Section
+            </span>
+            <nav aria-label="블로그 분류" className="flex flex-wrap gap-2">
+              {BLOG_SECTIONS.map((section) => {
+                const isSelected = section.key === selectedSection;
+                const href = section.key === "all" ? "/blog" : `/blog?section=${section.key}`;
 
-              return (
-                <Link
-                  key={section.key}
-                  href={href}
-                  aria-current={isSelected ? "page" : undefined}
-                  className={`rounded-full border px-4 py-2 text-xs transition-colors ${
-                    isSelected
-                      ? "border-accent-blue bg-accent-blue text-white"
-                      : "border-card-border text-foreground/60 hover:border-accent-blue/50 hover:text-accent-blue"
-                  }`}
-                >
-                  {section.label}
-                </Link>
-              );
-            })}
-          </nav>
+                return (
+                  <Link
+                    key={section.key}
+                    href={href}
+                    aria-current={isSelected ? "page" : undefined}
+                    className={`rounded-full border px-3.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isSelected
+                        ? "border-accent-blue bg-accent-blue text-white"
+                        : "border-card-border text-foreground/60 hover:border-accent-blue/50 hover:text-accent-blue"
+                      }`}
+                  >
+                    {section.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
 
-          {selectedSection !== "all" && (
-            <p className="mt-5 text-xs font-mono text-foreground/45">
-              현재 분류: {selectedSectionLabel}
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            {selectedSection !== "all" && (
+              <p className="text-xs font-mono text-foreground/45">
+                현재 분류: {selectedSectionLabel}
+              </p>
+            )}
+            <p className="text-xs font-mono text-foreground/45">
+              {visiblePosts.length}개의 글
             </p>
-          )}
+          </div>
         </div>
       </div>
 

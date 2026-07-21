@@ -37,7 +37,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: SITE_URL,
   title: {
-    default: `${SITE_TITLE} | ${PERSON_NAME}`,
+    default: SITE_TITLE,
     template: `%s | ${PERSON_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
       : {}),
   },
   openGraph: {
-    title: `${SITE_TITLE} | ${PERSON_NAME}`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     type: "website",
     url: SITE_URL.toString(),
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_TITLE} | ${PERSON_NAME}`,
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     images: [absoluteUrl(SOCIAL_IMAGE_PATH)],
   },
