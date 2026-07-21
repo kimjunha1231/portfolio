@@ -1,5 +1,5 @@
 export const SITE_URL = new URL(
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://portfolio.junha.dev",
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://kimjunha.vercel.app",
 );
 
 export const SITE_NAME = "김준하 | 프론트엔드 중심 풀스택 개발자";

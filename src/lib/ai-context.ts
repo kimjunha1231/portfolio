@@ -113,6 +113,38 @@ export function getLlmsFullText() {
   ].join("\n");
 }
 
+function getCollectionMarkdown(kind: "blog" | "projects") {
+  const posts = getAllPosts(kind);
+  const isProjects = kind === "projects";
+  const collectionPath = isProjects ? "projects" : "blog";
+  const title = isProjects ? "프로젝트 쇼케이스" : "기술 블로그";
+  const description = isProjects
+    ? "프로젝트별 문제 정의, 기술적 선택, 담당 역할과 성과를 확인할 수 있는 목록입니다."
+    : "프론트엔드, 웹 애니메이션, 성능 최적화와 아키텍처에 대한 기술 기록 목록입니다.";
+
+  return [
+    `# ${title}`,
+    "",
+    `> ${description}`,
+    "",
+    ...posts.flatMap((post) => [
+      `## [${post.title}](${absoluteUrl(`/${collectionPath}/${post.slug}`)})`,
+      post.description ? `> ${post.description}` : "",
+      `- ${getContentIndexMetadata(post)}`,
+      `- [Raw Markdown](${absoluteUrl(`/${collectionPath}/${post.slug}/raw`)})`,
+      "",
+    ]),
+  ].join("\n");
+}
+
+export function getProjectsMarkdown() {
+  return getCollectionMarkdown("projects");
+}
+
+export function getBlogMarkdown() {
+  return getCollectionMarkdown("blog");
+}
+
 export function getSkillMarkdown() {
   return [
     "---",
@@ -127,6 +159,11 @@ export function getSkillMarkdown() {
     "- 프로젝트별 역할, 문제 정의, 기술적 선택, 성능 개선과 수상 내역을 찾습니다.",
     "- 프론트엔드, 웹 애니메이션, Next.js와 성능 최적화 관련 기술 글을 찾습니다.",
     "- 사람이 읽는 페이지 대신 clean Markdown 원문을 가져올 수 있습니다.",
+    "",
+    "## When to use",
+    "- 김준하의 경력, 프로젝트 역할, 기술 선택, 성능 개선, 수상과 배포 기록을 확인할 때 사용합니다.",
+    "- 먼저 llms.txt에서 질문과 관련된 원문 URL을 고르고, 필요할 때 해당 페이지나 raw Markdown을 확인합니다.",
+    "- 사이트에 공개된 사실만 사용하며, 확인되지 않은 경력이나 성과를 추정하지 않습니다.",
     "",
     "## Key URLs",
     `- Profile: ${absoluteUrl("/")}`,

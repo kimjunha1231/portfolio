@@ -18,7 +18,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## SEO · AEO
 
-배포 시 canonical URL이 실제 도메인과 일치하도록 `NEXT_PUBLIC_SITE_URL`을 설정합니다. 기본값은 `https://portfolio.junha.dev`입니다.
+배포 시 canonical URL이 실제 도메인과 일치하도록 `NEXT_PUBLIC_SITE_URL`을 설정합니다. 기본값은 현재 배포 주소인 `https://kimjunha.vercel.app`입니다. 커스텀 도메인을 연결한 뒤에는 해당 도메인으로 변경합니다.
 
 - `/sitemap.xml`: 콘텐츠에서 자동 생성되는 검색엔진 sitemap
 - `/robots.txt`: Google·Naver·주요 AI crawler의 공개 콘텐츠 접근 규칙
