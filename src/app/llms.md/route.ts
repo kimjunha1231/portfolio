@@ -1,9 +1,8 @@
 import { getLlmsIndex } from "@/lib/ai-context";
 import { estimateTokens } from "@/lib/mdx";
 
-const content = getLlmsIndex();
-
 export function GET() {
+  const content = getLlmsIndex();
   return new Response(content, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",

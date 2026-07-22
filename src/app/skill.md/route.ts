@@ -1,9 +1,8 @@
 import { estimateTokens } from "@/lib/mdx";
 import { getSkillMarkdown } from "@/lib/ai-context";
 
-const content = getSkillMarkdown();
-
 export function GET() {
+  const content = getSkillMarkdown();
   return new Response(content, {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",

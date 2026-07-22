@@ -21,6 +21,8 @@ export default function Card3DTilt({ children, className = "" }: Card3DTiltProps
 
   // 마우스 이동 시 좌표 계산
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
     const el = cardRef.current;
     if (!el) return;
 

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { cache } from "react";
 import matter from "gray-matter";
 import {
   PROJECT_PLATFORMS,
@@ -59,6 +60,31 @@ function parseProjectRole(value: unknown): ProjectRole | undefined {
     : undefined;
 }
 
+function parsePostData(slug: string, fileContent: string): MDXPost {
+  const { data, content } = matter(fileContent);
+  const date = parseFrontmatterDate(data.date);
+
+  return {
+    slug,
+    title: data.title || "Untitled",
+    date,
+    lastModified: parseFrontmatterDate(data.lastModified) || date,
+    section: typeof data.section === "string" ? data.section : "",
+    category: data.category || "",
+    projectCategory:
+      typeof data.projectCategory === "string" ? data.projectCategory : "",
+    platforms: parseProjectPlatforms(data.platforms),
+    role: parseProjectRole(data.role),
+    description: data.description || "",
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    cover: typeof data.cover === "string" ? data.cover : "",
+    coverAlt: typeof data.coverAlt === "string" ? data.coverAlt : "",
+    coverFit: parseCoverFit(data.coverFit),
+    githubUrl: typeof data.githubUrl === "string" ? data.githubUrl : "",
+    content,
+  };
+}
+
 export const getPostSlugs = (type: "blog" | "projects") =>
   getAllPosts(type).map((post) => post.slug);
 
@@ -106,8 +132,8 @@ export function toRawMarkdown(post: MDXPost) {
   return `---\n${frontmatter}\n---\n\n${post.content.trim()}\n`;
 }
 
-// 특정 타입(blog 또는 projects)의 모든 포스트 목록 가져오기
-export function getAllPosts(type: "blog" | "projects"): MDXPost[] {
+// 특정 타입(blog 또는 projects)의 모든 포스트 목록 가져오기 (React.cache 적용)
+export const getAllPosts = cache((type: "blog" | "projects"): MDXPost[] => {
   const dirPath = path.join(CONTENT_PATH, type);
   
   // 디렉토리가 없으면 빈 배열 리턴 (개발 편의)
@@ -125,28 +151,9 @@ export function getAllPosts(type: "blog" | "projects"): MDXPost[] {
     .map((file) => {
       const filePath = path.join(dirPath, file);
       const fileContent = fs.readFileSync(filePath, "utf-8");
-      const { data, content } = matter(fileContent);
-      const date = parseFrontmatterDate(data.date);
+      const slug = file.replace(/\.mdx?$/, "");
 
-      return {
-        slug: file.replace(/\.mdx?$/, ""),
-        title: data.title || "Untitled",
-        date,
-        lastModified: parseFrontmatterDate(data.lastModified) || date,
-        section: typeof data.section === "string" ? data.section : "",
-        category: data.category || "",
-        projectCategory:
-          typeof data.projectCategory === "string" ? data.projectCategory : "",
-        platforms: parseProjectPlatforms(data.platforms),
-        role: parseProjectRole(data.role),
-        description: data.description || "",
-        tags: Array.isArray(data.tags) ? data.tags : [],
-        cover: typeof data.cover === "string" ? data.cover : "",
-        coverAlt: typeof data.coverAlt === "string" ? data.coverAlt : "",
-        coverFit: parseCoverFit(data.coverFit),
-        githubUrl: typeof data.githubUrl === "string" ? data.githubUrl : "",
-        content,
-      };
+      return parsePostData(slug, fileContent);
     });
 
   // 프로젝트는 프로젝트 날짜, 블로그는 최종 업데이트일 기준으로 최신순 정렬
@@ -161,10 +168,10 @@ export function getAllPosts(type: "blog" | "projects"): MDXPost[] {
 
     return safeBTime - safeATime;
   });
-}
+});
 
-// 특정 슬러그(slug)의 포스트 단건 가져오기
-export function getPostBySlug(type: "blog" | "projects", slug: string): MDXPost | null {
+// 특정 슬러그(slug)의 포스트 단건 가져오기 (React.cache 적용)
+export const getPostBySlug = cache((type: "blog" | "projects", slug: string): MDXPost | null => {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
     return null;
   }
@@ -183,26 +190,5 @@ export function getPostBySlug(type: "blog" | "projects", slug: string): MDXPost 
   }
 
   const fileContent = fs.readFileSync(finalPath, "utf-8");
-  const { data, content } = matter(fileContent);
-  const date = parseFrontmatterDate(data.date);
-
-  return {
-    slug,
-    title: data.title || "Untitled",
-    date,
-    lastModified: parseFrontmatterDate(data.lastModified) || date,
-    section: typeof data.section === "string" ? data.section : "",
-    category: data.category || "",
-    projectCategory:
-      typeof data.projectCategory === "string" ? data.projectCategory : "",
-    platforms: parseProjectPlatforms(data.platforms),
-    role: parseProjectRole(data.role),
-    description: data.description || "",
-    tags: Array.isArray(data.tags) ? data.tags : [],
-    cover: typeof data.cover === "string" ? data.cover : "",
-    coverAlt: typeof data.coverAlt === "string" ? data.coverAlt : "",
-    coverFit: parseCoverFit(data.coverFit),
-    githubUrl: typeof data.githubUrl === "string" ? data.githubUrl : "",
-    content,
-  };
-}
+  return parsePostData(slug, fileContent);
+});

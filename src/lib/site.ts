@@ -1,6 +1,14 @@
-export const SITE_URL = new URL(
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://kimjunha.vercel.app",
-);
+function getSafeSiteUrl(): URL {
+  try {
+    return new URL(
+      process.env.NEXT_PUBLIC_SITE_URL ?? "https://kimjunha.vercel.app",
+    );
+  } catch {
+    return new URL("https://kimjunha.vercel.app");
+  }
+}
+
+export const SITE_URL = getSafeSiteUrl();
 
 export const SITE_NAME = "김준하 | 프론트엔드 중심 풀스택 개발자";
 export const SITE_TITLE = "프론트엔드 중심 풀스택 개발자 김준하입니다.";
@@ -12,6 +20,7 @@ export const PERSON_ALTERNATE_NAME = "Kim Junha";
 export const PERSON_JOB_TITLE = "Frontend-focused Fullstack Developer";
 export const GITHUB_URL = "https://github.com/kimjunha1231";
 export const CONTACT_EMAIL = "rlawnsgk0610@gmail.com";
+export const CONTACT_PHONE = "010-9383-9023";
 export const SOCIAL_IMAGE_PATH = "/images/typography_poster.png";
 
 export const TECHNICAL_TOPICS = [

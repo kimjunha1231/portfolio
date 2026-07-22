@@ -1,9 +1,8 @@
 import { estimateTokens } from "@/lib/mdx";
 import { getLlmsFullText } from "@/lib/ai-context";
 
-const content = getLlmsFullText();
-
 export function GET() {
+  const content = getLlmsFullText();
   return new Response(content, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
