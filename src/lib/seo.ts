@@ -3,6 +3,7 @@ import { estimateTokens, toRawMarkdown, type MDXPost } from "@/lib/mdx";
 import {
   absoluteUrl,
   GITHUB_URL,
+  LINKEDIN_URL,
   PERSON_NAME,
   SITE_NAME,
   SITE_URL,
@@ -109,7 +110,7 @@ export function getContentStructuredData(
       "@id": `${SITE_URL.toString()}#person`,
       name: PERSON_NAME,
       url: SITE_URL.toString(),
-      sameAs: [GITHUB_URL],
+      sameAs: [GITHUB_URL, LINKEDIN_URL],
     },
     publisher: { "@id": `${SITE_URL.toString()}#person` },
     isPartOf: { "@id": `${SITE_URL.toString()}#website` },

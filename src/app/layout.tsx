@@ -5,6 +5,7 @@ import StructuredData from "@/components/shared/StructuredData";
 import Header from "@/components/layout/Header";
 import {
   GITHUB_URL,
+  LINKEDIN_URL,
   PERSON_ALTERNATE_NAME,
   PERSON_JOB_TITLE,
   PERSON_NAME,
@@ -116,7 +117,7 @@ const siteStructuredData = [
     alternateName: PERSON_ALTERNATE_NAME,
     url: SITE_URL.toString(),
     jobTitle: PERSON_JOB_TITLE,
-    sameAs: [GITHUB_URL],
+    sameAs: [GITHUB_URL, LINKEDIN_URL],
     knowsAbout: TECHNICAL_TOPICS,
   },
 ];

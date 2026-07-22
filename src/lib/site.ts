@@ -19,6 +19,7 @@ export const PERSON_NAME = "김준하";
 export const PERSON_ALTERNATE_NAME = "Kim Junha";
 export const PERSON_JOB_TITLE = "Frontend-focused Fullstack Developer";
 export const GITHUB_URL = "https://github.com/kimjunha1231";
+export const LINKEDIN_URL = "https://www.linkedin.com/in/%EC%A4%80%ED%95%98-%EA%B9%80-b34217329/";
 export const CONTACT_EMAIL = "rlawnsgk0610@gmail.com";
 export const CONTACT_PHONE = "010-9383-9023";
 export const SOCIAL_IMAGE_PATH = "/images/typography_poster.png";

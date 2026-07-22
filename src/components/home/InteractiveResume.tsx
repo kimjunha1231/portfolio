@@ -75,7 +75,7 @@ export default function InteractiveResume() {
             </h3>
           </div>
 
-          <div className="lg:col-span-9 space-y-12 pl-2 border-l border-accent-blue/15">
+          <div className="lg:col-span-9 space-y-16 pl-2 border-l border-accent-blue/15">
             {/* JobSecretary (2025.11 ~ 2025.12) */}
             <Link
               href="/projects/jobsecretary"
@@ -90,13 +90,13 @@ export default function InteractiveResume() {
                 <span className="text-xs font-mono text-foreground/70 bg-foreground/5 px-2.5 py-0.5 rounded-full border border-card-border">2025.11 ~ 2025.12</span>
               </div>
               <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">Next.js 15, TypeScript, React Hook Form, TanStack Query, Zustand, Gemini API, Supabase</p>
-              <p className="text-xs font-normal text-foreground/90 leading-relaxed mb-3">
+              <p className="text-xs font-normal text-foreground/90 leading-loose mb-4">
                 채용 공고와 지원 현황, 자기소개서, PDF 변환, AI 면접 질문 생성을 하나의 흐름으로 연결한 취업 준비 관리 서비스입니다.
               </p>
-              <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-1.5">
-                <li><strong>칸반 렌더링 최적화</strong>: React Developer Tools Profiler에서 동일한 드래그 시나리오를 비교해 전체 커밋 271회에서 98회, 비활성 카드 리렌더링 268회에서 0회로 감소</li>
-                <li><strong>작성 흐름 안정화</strong>: React Hook Form의 비제어 입력과 isDirty 기반 이탈 경고로 폼 입력과 서버 저장 시점을 분리</li>
-                <li><strong>구조 설계</strong>: App·Widgets·Features·Entities·Shared 계층으로 페이지 조립, 사용자 기능, 도메인 모델의 책임과 의존성 방향을 정리</li>
+              <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-3 leading-relaxed">
+                <li><strong>칸반보드 렌더링 최적화</strong>: React Developer Tools Profiler에서 동일한 드래그 시나리오를 비교해 전체 커밋 271회에서 98회, 비활성 카드 리렌더링 268회에서 0회로 감소</li>
+                <li><strong>자기소개서 작성 안정화</strong>: React Hook Form의 비제어 입력과 isDirty 기반 이탈 경고로 폼 입력과 서버 저장 시점을 분리</li>
+                <li><strong>FSD 패턴 적용</strong>: App·Widgets·Features·Entities·Shared 계층으로 페이지 조립, 사용자 기능, 도메인 모델의 책임과 의존성 방향을 정리</li>
               </ul>
             </Link>
 
@@ -114,13 +114,13 @@ export default function InteractiveResume() {
                 <span className="text-xs font-mono text-foreground/70 bg-foreground/5 px-2.5 py-0.5 rounded-full border border-card-border">2024.11 ~ 2025.09</span>
               </div>
               <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">React, TypeScript, Zustand, TanStack Query, MSW, Tailwind CSS</p>
-              <p className="text-xs font-normal text-foreground/90 leading-relaxed mb-3">
+              <p className="text-xs font-normal text-foreground/90 leading-loose mb-4">
                 Flutter MVP를 React·TypeScript 웹 서비스로 전환한 AI 가족 추억 앨범 서비스입니다.
               </p>
-              <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-1.5">
-                <li><strong>웹 전환</strong>: Flutter MVP를 React·TypeScript로 마이그레이션하고 Zustand와 TanStack Query로 클라이언트·서버 상태를 분리</li>
-                <li><strong>협업 개발 기반</strong>: MSW로 가족·게시글·댓글·인증 API를 모킹해 백엔드 구현 전에도 주요 화면과 응답 상태를 검증</li>
-                <li><strong>서비스 성과</strong>: 2024 클라우드 아이디어 공모전 대상(부산시장상), 숭실캡스톤디자인 장려상, Pre-스타트업 선정</li>
+              <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-3 leading-relaxed">
+                <li><strong>기술 전환</strong>: Flutter MVP를 React·TypeScript로 마이그레이션하고 Zustand와 TanStack Query로 클라이언트·서버 상태를 분리</li>
+                <li><strong>백엔드 구현 전 병목 해결</strong>: MSW로 가족·게시글·댓글·인증 API를 모킹해 백엔드 구현 전에도 주요 화면과 응답 상태를 검증</li>
+                <li><strong>성과</strong>: 2024 클라우드 아이디어 공모전 대상(부산시장상), 숭실캡스톤디자인 장려상, Pre-스타트업 선정(창업사무실 입주)</li>
               </ul>
             </Link>
 
@@ -138,13 +138,13 @@ export default function InteractiveResume() {
                 <span className="text-xs font-mono text-foreground/70 bg-foreground/5 px-2.5 py-0.5 rounded-full border border-card-border">2024.03 ~ 2024.12</span>
               </div>
               <p className="text-xs font-mono text-accent-blue/90 mb-2 font-bold">Flutter, Dart, Riverpod, Dio, Retrofit, WebSocket, Firebase Messaging</p>
-              <p className="text-xs font-normal text-foreground/90 leading-relaxed mb-3">
+              <p className="text-xs font-normal text-foreground/90 leading-loose mb-4">
                 LLM 기반 주제 생성·주장 코칭과 WebSocket 기반 실시간 토론·투표·관전을 제공하는 Flutter 앱입니다.
               </p>
-              <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-1.5">
-                <li><strong>통신 흐름 분리</strong>: 토론방 기본 정보·기존 내역은 REST API, 채팅·턴 상태·관전자 댓글·투표는 WebSocket으로 분리해 초기 데이터와 실시간 이벤트의 처리 순서를 정리</li>
+              <ul className="list-disc pl-4 text-xs font-normal text-foreground/90 space-y-3 leading-relaxed">
+                <li><strong>통신 분리</strong>: 토론방 기본 정보·기존 내역은 REST API, 채팅·턴 상태·관전자 댓글·투표는 WebSocket으로 분리해 초기 데이터와 실시간 이벤트의 처리 순서를 정리</li>
                 <li><strong>앱 상태 관리</strong>: Riverpod으로 토론·인증·알림 상태를 분리하고 Dio·Retrofit으로 인증·토론 API를 연동</li>
-                <li><strong>서비스 출시</strong>: 2024 한이음 ICT멘토링 프로젝트 은상(정보통신기획평가원장상) 수상 및 One Store·App Store 배포 경험</li>
+                <li><strong>성과</strong>: 2024 한이음 ICT멘토링 프로젝트 은상(정보통신기획평가원장상) 수상 및 One Store·App Store 배포 경험</li>
               </ul>
             </Link>
           </div>

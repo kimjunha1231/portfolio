@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "프로젝트 | 김준하",
     description:
-      "프론트엔드와 풀스택 개발, AI 서비스, 웹 성능 최적화 프로젝트를 소개합니다.",
+      "풀스택 개발, AI 서비스, 웹 성능 최적화 프로젝트를 소개합니다.",
     type: "website",
     url: new URL("/projects", SITE_URL).toString(),
   },
@@ -77,11 +77,10 @@ function FilterGroup({
                 role: option.value as ProjectRole | "all",
               })}
               aria-current={isSelected ? "page" : undefined}
-              className={`rounded-full border px-3.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                isSelected
-                  ? "border-accent-blue bg-accent-blue text-white"
-                  : "border-card-border text-foreground/60 hover:border-accent-blue/50 hover:text-accent-blue"
-              }`}
+              className={`rounded-full border px-3.5 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-background ${isSelected
+                ? "border-accent-blue bg-accent-blue text-white"
+                : "border-card-border text-foreground/60 hover:border-accent-blue/50 hover:text-accent-blue"
+                }`}
             >
               {option.label}
             </Link>
@@ -116,19 +115,19 @@ export default async function ProjectsListPage({ searchParams }: ProjectsListPag
     metaItems: [
       ...(project.platforms?.length
         ? [
-            {
-              label: "Platform",
-              value: project.platforms
-                .map((platform) => PROJECT_PLATFORM_LABELS[platform])
-                .join(" · "),
-            },
-          ]
+          {
+            label: "Platform",
+            value: project.platforms
+              .map((platform) => PROJECT_PLATFORM_LABELS[platform])
+              .join(" · "),
+          },
+        ]
         : []),
       ...(project.role
         ? [{ label: "Role", value: PROJECT_ROLE_LABELS[project.role] }]
         : []),
     ],
-    description: project.description || "김준하의 프로젝트 기술 사례입니다.",
+    description: project.description || "Smart Messaging System은 마케터가 고객을 선택하고, 메시지를 작성·검토한 뒤 여러 채널로 발송하고 결과를 분석할 수 있도록 구성한 통합 메시징 시스템입니다.",
     tags: project.tags || [],
     cover: project.cover,
     coverAlt: project.coverAlt,

@@ -2,6 +2,7 @@ import { estimateTokens, getAllPosts, toRawMarkdown } from "@/lib/mdx";
 import {
   CONTACT_EMAIL,
   GITHUB_URL,
+  LINKEDIN_URL,
   PERSON_JOB_TITLE,
   PERSON_NAME,
   SITE_DESCRIPTION,
@@ -33,6 +34,7 @@ const profileSummary = [
   `- 핵심 주제: ${TECHNICAL_TOPICS.join(", ")}`,
   `- 연락처: ${CONTACT_EMAIL}`,
   `- GitHub: ${GITHUB_URL}`,
+  `- LinkedIn: ${LINKEDIN_URL}`,
 ].join("\n");
 
 export function getLlmsIndex() {

@@ -36,8 +36,8 @@ function CardCover({ item, priority }: { item: BentoCardItem; priority: boolean 
         alt={item.coverAlt || `${item.title} 대표 이미지`}
         fill
         priority={priority}
-        sizes="(max-width: 767px) 100vw, 50vw"
-        className={`${item.coverFit === "contain" ? "object-contain p-10 md:p-14" : "object-cover"} transition-transform duration-700 ease-out group-hover:scale-[1.035]`}
+        sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+        className={`${item.coverFit === "contain" ? "object-contain p-6 md:p-8" : "object-cover"} transition-transform duration-700 ease-out group-hover:scale-[1.035]`}
       />
     );
   }
@@ -81,7 +81,7 @@ export default function BentoCards({
       aria-label={sectionLabel}
       className="py-12 px-6 md:px-12 lg:px-24 max-w-7xl mx-auto w-full relative z-10"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12 md:gap-y-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 md:gap-y-10">
         {items.map((item, index) => (
           <div key={item.slug} className="relative">
             <Link
@@ -95,7 +95,7 @@ export default function BentoCards({
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/10 opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
               </div>
 
-              <div className="flex min-h-[285px] flex-col p-6 md:p-8">
+              <div className="flex min-h-[220px] flex-col p-5 md:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <span className="rounded-full bg-accent-blue/10 px-3 py-1 text-[10px] font-mono uppercase tracking-[0.1em] text-accent-blue dark:bg-accent-blue/20">
                     {item.category}
@@ -105,7 +105,7 @@ export default function BentoCards({
                   </span>
                 </div>
 
-                <h2 className="mt-5 text-2xl font-light tracking-tight text-foreground transition-colors duration-300 group-hover:text-accent-blue md:text-3xl">
+                <h2 className="mt-4 text-xl font-light tracking-tight text-foreground transition-colors duration-300 group-hover:text-accent-blue md:text-2xl">
                   {item.title}
                 </h2>
 
@@ -127,7 +127,7 @@ export default function BentoCards({
                   </div>
                 ) : null}
 
-                <p className="mt-3 min-h-[4.5rem] text-sm font-light leading-relaxed text-foreground/70 line-clamp-3">
+                <p className="mt-3 min-h-[3.5rem] text-xs md:text-sm font-light leading-relaxed text-foreground/70 line-clamp-3">
                   {item.description}
                 </p>
 

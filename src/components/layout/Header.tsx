@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Sun, Moon, ArrowUpRight } from "lucide-react";
 import { gsap } from "gsap";
+import { GITHUB_URL, LINKEDIN_URL } from "@/lib/site";
 
 export default function Header() {
   const headerRef = useRef<HTMLElement>(null);
@@ -78,15 +79,25 @@ export default function Header() {
           </button>
         </nav>
 
-        {/* 3. 우측 Github 링크 */}
-        <a
-          href="https://github.com/kimjunha1231"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden md:flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.1em] hover:text-accent-blue transition-colors"
-        >
-          Github <ArrowUpRight className="w-3.5 h-3.5" />
-        </a>
+        {/* 3. 우측 외부 소셜 링크 */}
+        <div className="hidden md:flex items-center gap-4 text-xs font-mono uppercase tracking-[0.1em]">
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 hover:text-accent-blue transition-colors"
+          >
+            Github <ArrowUpRight className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href={LINKEDIN_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 hover:text-accent-blue transition-colors"
+          >
+            LinkedIn <ArrowUpRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
       </div>
     </header>
   );

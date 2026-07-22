@@ -72,7 +72,7 @@ export default function Hero() {
 
 
       {/* 🤝 Editorial Split Layout (좌측 소개글, 우측 아담한 로고 카드 배치) */}
-      <div 
+      <div
         ref={heroContentRef}
         className="w-full max-w-7xl mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center mt-8 mb-4 z-10"
       >
@@ -89,17 +89,22 @@ export default function Hero() {
           {/* 2. 타이틀 */}
           <h1
             data-reveal
-            className="text-4xl sm:text-5xl md:text-7xl tracking-tight leading-[1.2] font-light text-foreground"
+            className="text-4xl sm:text-5xl md:text-7xl tracking-tight leading-[1.2] font-light text-foreground break-keep"
           >
-            프론트엔드 중심 풀스택 개발자 <span className="relative inline-block whitespace-nowrap">
-              <span className="text-accent-blue relative z-10">김준하</span>
-              <div className="absolute -top-6 -right-6 w-16 h-16 pointer-events-none z-0">
-                <LottieAnimation
-                  url="https://lottie.host/80ff65b6-b072-466d-ad02-8ce1b250ff6d/y6UqYFw06I.json"
-                  className="w-full h-full"
-                />
-              </div>
-            </span>입니다.
+            <span className="block">프론트엔드 중심</span>
+            <span className="block">
+              풀스택 개발자{" "}
+              <span className="relative inline-block whitespace-nowrap">
+                <span className="text-accent-blue relative z-10">김준하</span>
+                <div className="absolute -top-6 -right-6 w-16 h-16 pointer-events-none z-0">
+                  <LottieAnimation
+                    url="https://lottie.host/80ff65b6-b072-466d-ad02-8ce1b250ff6d/y6UqYFw06I.json"
+                    className="w-full h-full"
+                  />
+                </div>
+              </span>
+              입니다.
+            </span>
           </h1>
 
           {/* 3. 신규 소개 문구 */}
