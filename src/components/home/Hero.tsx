@@ -89,12 +89,13 @@ export default function Hero() {
           {/* 2. 타이틀 */}
           <h1
             data-reveal
-            className="text-4xl sm:text-5xl md:text-7xl tracking-tight leading-[1.2] font-light text-foreground break-keep"
+            className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.25] font-light text-foreground break-keep"
           >
-            <span className="block">프론트엔드 중심</span>
-            <span className="block">
-              풀스택 개발자{" "}
-              <span className="relative inline-block whitespace-nowrap">
+            <span className="block whitespace-nowrap">
+              프론트엔드 중심 풀스택 개발자
+            </span>
+            <span className="block whitespace-nowrap mt-1">
+              <span className="relative inline-block">
                 <span className="text-accent-blue relative z-10">김준하</span>
                 <div className="absolute -top-6 -right-6 w-16 h-16 pointer-events-none z-0">
                   <LottieAnimation
