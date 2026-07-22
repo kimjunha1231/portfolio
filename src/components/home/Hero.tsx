@@ -11,7 +11,10 @@ export default function Hero() {
   const heroContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (
+      navigator.webdriver === true ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) return;
 
     // 1. 마우스 무브에 반응하는 백그라운드 오라(Aura) 광원 효과 (MengTo & Taste-Skill)
     const handleMouseMove = (e: MouseEvent) => {

@@ -9,13 +9,17 @@ import {
 export default function sitemap(): MetadataRoute.Sitemap {
   const blogPosts = getAllPosts("blog");
   const projects = getAllPosts("projects");
+  const latestSiteUpdate = getLatestLastModified(
+    [...blogPosts, ...projects, { lastModified: SITE_LAST_MODIFIED }],
+    SITE_LAST_MODIFIED,
+  );
   const latestBlogUpdate = getLatestLastModified(blogPosts, SITE_LAST_MODIFIED);
   const latestProjectUpdate = getLatestLastModified(projects, SITE_LAST_MODIFIED);
 
   return [
     {
       url: SITE_URL.toString(),
-      lastModified: SITE_LAST_MODIFIED,
+      lastModified: latestSiteUpdate,
     },
     {
       url: new URL("/projects", SITE_URL).toString(),

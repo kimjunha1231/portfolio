@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import { Calendar, ExternalLink } from "lucide-react";
 import { getPostBySlug, getPostSlugs, toRawMarkdown } from "@/lib/mdx";
 import {
+  getContentCanonicalUrl,
   getContentMetadata,
   getContentStructuredData,
 } from "@/lib/seo";
@@ -51,16 +52,17 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
   }
 
   const rawMarkdownContent = toRawMarkdown(project);
+  const rawMarkdownUrl = `${getContentCanonicalUrl(project, "projects")}/raw`;
 
   return (
-    <article className="min-h-screen py-24 px-6 md:px-12 lg:px-24 max-w-4xl mx-auto w-full relative z-10">
+    <article aria-labelledby="project-post-title" className="min-h-screen py-24 px-6 md:px-12 lg:px-24 max-w-4xl mx-auto w-full relative z-10">
       <StructuredData
         id="project-post-structured-data"
         data={getContentStructuredData(project, "projects")}
       />
 
       <header className="mb-12 pb-8 border-b border-card-border">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight leading-tight mb-6">
+        <h1 id="project-post-title" className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight leading-tight mb-6">
           {project.title}
         </h1>
 
@@ -99,14 +101,23 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
             <span className="w-1.5 h-1.5 rounded-full bg-foreground/35" aria-hidden="true" />
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>최종 업데이트</span>
-              <time dateTime={project.lastModified}>
-                {project.lastModified}
-              </time>
+              <span>작성일</span>
+              <time dateTime={project.date}>{project.date}</time>
+              <span aria-hidden="true">·</span>
+              <span>수정일</span>
+              <time dateTime={project.lastModified}>{project.lastModified}</time>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <a
+              href={rawMarkdownUrl}
+              className="text-[10px] font-mono text-foreground/55 underline decoration-foreground/20 underline-offset-4 transition-colors hover:text-accent-blue hover:decoration-accent-blue/40"
+              rel="alternate"
+              type="text/markdown"
+            >
+              원문 Markdown
+            </a>
             {project.githubUrl && (
               <a
                 href={project.githubUrl}

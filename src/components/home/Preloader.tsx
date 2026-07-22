@@ -11,6 +11,8 @@ export default function Preloader() {
 
   useEffect(() => {
     if (sessionStorage.getItem("hasSeenPreloader") === "true") return;
+    // 브라우저 에이전트와 자동화 도구가 첫 화면의 실제 콘텐츠를 가리지 않도록 합니다.
+    if (navigator.webdriver === true) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       sessionStorage.setItem("hasSeenPreloader", "true");
       return;

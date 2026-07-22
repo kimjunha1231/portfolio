@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { AlertCircle, Check, Copy } from "lucide-react";
 
 interface CopyMarkdownButtonProps {
   content: string;
@@ -9,14 +9,19 @@ interface CopyMarkdownButtonProps {
 
 export default function CopyMarkdownButton({ content }: CopyMarkdownButtonProps) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(content);
+      setCopyFailed(false);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error("Failed to copy Markdown: ", error);
+      setCopied(false);
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 3000);
     }
   };
 
@@ -33,6 +38,13 @@ export default function CopyMarkdownButton({ content }: CopyMarkdownButtonProps)
           <Check className="h-3.5 w-3.5 text-emerald-500" />
           <span className="font-semibold text-emerald-500" aria-live="polite">
             마크다운 복사됨
+          </span>
+        </>
+      ) : copyFailed ? (
+        <>
+          <AlertCircle className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />
+          <span className="font-semibold text-amber-600 dark:text-amber-400" aria-live="polite">
+            복사할 수 없습니다
           </span>
         </>
       ) : (
