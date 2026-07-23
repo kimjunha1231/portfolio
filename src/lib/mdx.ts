@@ -88,6 +88,13 @@ function parsePostData(slug: string, fileContent: string): MDXPost {
 export const getPostSlugs = (type: "blog" | "projects") =>
   getAllPosts(type).map((post) => post.slug);
 
+export function toCleanMarkdown(post: MDXPost) {
+  return `# ${post.title}
+
+${post.content.trim()}
+`;
+}
+
 export function estimateTokens(value: string) {
   return Math.max(1, Math.ceil(value.length / 4));
 }

@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import { Calendar } from "lucide-react";
-import { getPostBySlug, getPostSlugs, toRawMarkdown } from "@/lib/mdx";
+import { getPostBySlug, getPostSlugs, toCleanMarkdown } from "@/lib/mdx";
 import {
   getContentCanonicalUrl,
   getContentMetadata,
@@ -48,7 +48,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound();
   }
 
-  const rawMarkdownContent = toRawMarkdown(post);
+  const cleanMarkdownContent = toCleanMarkdown(post);
   const rawMarkdownUrl = `${getContentCanonicalUrl(post, "blog")}/raw`;
 
   return (
@@ -93,7 +93,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             >
               원문 Markdown
             </a>
-            <CopyMarkdownButton content={rawMarkdownContent} />
+            <CopyMarkdownButton content={cleanMarkdownContent} />
           </div>
         </div>
       </header>

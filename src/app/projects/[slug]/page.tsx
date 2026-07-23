@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import { Calendar, ExternalLink } from "lucide-react";
-import { getPostBySlug, getPostSlugs, toRawMarkdown } from "@/lib/mdx";
+import { getPostBySlug, getPostSlugs, toCleanMarkdown } from "@/lib/mdx";
 import {
   getContentCanonicalUrl,
   getContentMetadata,
@@ -51,7 +51,7 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
     notFound();
   }
 
-  const rawMarkdownContent = toRawMarkdown(project);
+  const cleanMarkdownContent = toCleanMarkdown(project);
   const rawMarkdownUrl = `${getContentCanonicalUrl(project, "projects")}/raw`;
 
   return (
@@ -130,7 +130,7 @@ export default async function ProjectPostPage({ params }: ProjectPostPageProps) 
                 <span>GitHub 저장소</span>
               </a>
             )}
-            <CopyMarkdownButton content={rawMarkdownContent} />
+            <CopyMarkdownButton content={cleanMarkdownContent} />
           </div>
         </div>
       </header>
