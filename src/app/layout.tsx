@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import StructuredData from "@/components/shared/StructuredData";
 import Header from "@/components/layout/Header";
+import GoogleAnalytics from "@/components/shared/GoogleAnalytics";
 import {
   GITHUB_URL,
   LINKEDIN_URL,
@@ -49,6 +50,9 @@ export const metadata: Metadata = {
   category: "technology",
   alternates: {
     canonical: "/",
+    types: {
+      "application/rss+xml": new URL("/rss.xml", SITE_URL).toString(),
+    },
   },
   keywords: TECHNICAL_TOPICS,
   verification: {
@@ -140,6 +144,7 @@ export default function RootLayout({
         >
           본문으로 바로가기
         </a>
+        <GoogleAnalytics />
         <ThemeProvider>
           <StructuredData id="site-structured-data" data={siteStructuredData} />
           {/* Film grain texture overlay */}
