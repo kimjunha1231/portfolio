@@ -17,6 +17,17 @@ description: "여러 판매 채널과 물류센터의 재고를 SKU 단위로 �
 
 StockFit은 현대그린푸드의 여러 판매 채널과 물류센터에 흩어진 재고를 SKU 단위로 통합해 보여주는 B2B 재고 운영 플랫폼입니다. 운영자는 재고 수량만 확인하는 것이 아니라 판매처별 보유 현황, LOT와 소비기한, 안전재고 미달 여부, 수요예측과 위험 사유를 함께 살펴보고 필요한 대응을 판단합니다.
 
+<figure className="not-prose my-8">
+  <div className="overflow-hidden rounded-2xl border border-card-border bg-black/5">
+    <ZoomableImage
+      src="/images/blog/integrated-inventory-source-to-canonical.png"
+      alt="StockFit의 네 가지 원천 재고가 공통 메모리 형식을 거쳐 상품과 SKU, 가격, LOT, 정책, 재고 기준 데이터로 연결되는 도식"
+      className="w-full object-contain"
+    />
+  </div>
+  <figcaption className="mt-2 text-xs text-foreground/60">StockFit · 원천 재고를 공통 기준 데이터로 연결한 구조</figcaption>
+</figure>
+
 - **구분**: 팀 프로젝트 (풀스택 4인)
 - **기간**: 2026.08
 - **담당 범위**: 프론트엔드 공통 기반, 통합 재고 조회·상세·필터, 수요예측·위험 상태, 원천 재고 동기화, 조회·초기 렌더링 성능 개선
