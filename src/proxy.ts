@@ -16,13 +16,14 @@ function isKnownPagePath(pathname: string) {
     "/",
     "/projects",
     "/blog",
+    "/handbook",
     "/videos",
     "/about",
     "/contact",
     "/privacy",
     "/developers",
     "/.well-known/mcp",
-  ].includes(pathname) || /^\/(projects|blog|videos)\/[^/]+(?:\/raw)?$/.test(pathname);
+  ].includes(pathname) || /^\/(projects|blog|videos)\/[^/]+(?:\/raw)?$/.test(pathname) || /^\/handbook(?:\/.*)?$/.test(pathname);
 }
 
 const markdownNotFound = `# 404 Not Found
