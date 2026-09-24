@@ -15,7 +15,7 @@ import {
   formatDateForSchema,
 } from "@/lib/site";
 
-export type ContentKind = "blog" | "projects";
+export type ContentKind = "blog" | "projects" | "handbook";
 
 function getContentDescription(post: MDXPost) {
   return post.description || `${post.title} - ${SITE_NAME}`;
@@ -59,7 +59,15 @@ function getGeoPlace(geo: ContentGeo) {
 }
 
 export function getContentCanonicalUrl(post: MDXPost, kind: ContentKind) {
-  return new URL(`/${kind === "blog" ? "blog" : "projects"}/${post.slug}`, SITE_URL).toString();
+  return new URL(`/${kind}/${post.slug}`, SITE_URL).toString();
+}
+
+export function getContentRawUrl(post: MDXPost, kind: ContentKind) {
+  if (kind === "handbook") {
+    return new URL(`/handbook/raw/${post.slug}`, SITE_URL).toString();
+  }
+
+  return `${getContentCanonicalUrl(post, kind)}/raw`;
 }
 
 export function getContentMetadata(
@@ -67,7 +75,7 @@ export function getContentMetadata(
   kind: ContentKind,
 ): Metadata {
   const canonicalUrl = getContentCanonicalUrl(post, kind);
-  const rawUrl = `${canonicalUrl}/raw`;
+  const rawUrl = getContentRawUrl(post, kind);
   const description = getContentDescription(post);
   const keywords = getContentKeywords(post);
   const image = getContentImage(post);
@@ -178,8 +186,12 @@ export function getContentStructuredData(
     inLanguage: "ko-KR",
   };
 
-  const collectionName = kind === "blog" ? "기술 블로그" : "프로젝트 쇼케이스";
-  const collectionPath = kind === "blog" ? "/blog" : "/projects";
+  const collectionName = kind === "blog"
+    ? "기술 블로그"
+    : kind === "projects"
+      ? "프로젝트 쇼케이스"
+      : "Frontend Handbook";
+  const collectionPath = `/${kind}`;
 
   return [
     article,

@@ -12,6 +12,7 @@ import {
 
 // 콘텐츠 루트 경로 설정
 const CONTENT_PATH = path.join(process.cwd(), "content");
+export type ContentType = "blog" | "projects" | "handbook";
 
 type LastModifiedCacheEntry = {
   mtimeMs: number;
@@ -204,7 +205,7 @@ function parsePostData(slug: string, fileContent: string, filePath?: string): MD
   };
 }
 
-export const getPostSlugs = (type: "blog" | "projects") =>
+export const getPostSlugs = (type: ContentType) =>
   getAllPosts(type)
     .filter((post) => post.published)
     .map((post) => post.slug);
@@ -262,29 +263,32 @@ export function toRawMarkdown(post: MDXPost) {
   return `---\n${frontmatter}\n---\n\n${post.content.trim()}\n`;
 }
 
-// 특정 타입(blog 또는 projects)의 모든 포스트 목록 가져오기 (React.cache 적용)
-export const getAllPosts = cache((type: "blog" | "projects"): MDXPost[] => {
-  const dirPath = path.join(CONTENT_PATH, type);
-  
-  // 디렉토리가 없으면 빈 배열 리턴 (개발 편의)
-  if (!fs.existsSync(dirPath)) {
-    return [];
-  }
+function getMarkdownFiles(directoryPath: string, recursive: boolean): string[] {
+  if (!fs.existsSync(directoryPath)) return [];
 
-  const files = fs
-    .readdirSync(dirPath, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
+  return fs
+    .readdirSync(directoryPath, { withFileTypes: true })
+    .filter((entry) => !(recursive && entry.name.startsWith("_")))
+    .flatMap((entry) => {
+      const entryPath = path.join(directoryPath, entry.name);
 
-  const posts = files
-    .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))
-    .map((file) => {
-      const filePath = path.join(dirPath, file);
-      const fileContent = fs.readFileSync(filePath, "utf-8");
-      const slug = file.replace(/\.mdx?$/, "");
-
-      return parsePostData(slug, fileContent, filePath);
+      if (entry.isFile() && /\.mdx?$/.test(entry.name)) return [entryPath];
+      if (recursive && entry.isDirectory()) return getMarkdownFiles(entryPath, true);
+      return [];
     });
+}
+
+// 블로그와 프로젝트는 기존처럼 한 단계, 핸드북은 정보 구조에 맞춰 중첩 경로를 읽는다.
+export const getAllPosts = cache((type: ContentType): MDXPost[] => {
+  const dirPath = path.join(CONTENT_PATH, type);
+
+  const posts = getMarkdownFiles(dirPath, type === "handbook").map((filePath) => {
+    const relativePath = path.relative(dirPath, filePath);
+    const fileContent = fs.readFileSync(filePath, "utf-8");
+    const slug = relativePath.replace(/\\/g, "/").replace(/\.mdx?$/, "");
+
+    return parsePostData(slug, fileContent, filePath);
+  });
 
   // 프로젝트는 프로젝트 날짜, 블로그는 최종 업데이트일 기준으로 최신순 정렬
   const sortDate = (post: MDXPost) =>
@@ -301,8 +305,13 @@ export const getAllPosts = cache((type: "blog" | "projects"): MDXPost[] => {
 });
 
 // 특정 슬러그(slug)의 포스트 단건 가져오기 (React.cache 적용)
-export const getPostBySlug = cache((type: "blog" | "projects", slug: string): MDXPost | null => {
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+export const getPostBySlug = cache((type: ContentType, slug: string): MDXPost | null => {
+  const slugSegments = slug.split("/");
+  const isValidSlug = type === "handbook"
+    ? slugSegments.every((segment) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(segment))
+    : /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+
+  if (!isValidSlug) {
     return null;
   }
 

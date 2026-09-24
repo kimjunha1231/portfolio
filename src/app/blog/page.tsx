@@ -108,6 +108,13 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
             프론트엔드와 웹 애니메이션 최적화, 풀스택 아키텍처 구현 과정에서 얻은 깊이 있는 고찰과 기록입니다.
           </p>
 
+          <p className="mt-4 text-sm text-foreground/60">
+            개념을 순서대로 공부하고 싶다면{" "}
+            <Link href="/handbook" className="font-medium text-accent-blue underline decoration-accent-blue/40 underline-offset-4 transition-colors hover:text-foreground focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue">
+              Frontend Handbook
+            </Link>에서 학습 목차를 확인할 수 있습니다.
+          </p>
+
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-b border-card-border/60 py-4">
             <div className="flex items-center gap-3">
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/40">

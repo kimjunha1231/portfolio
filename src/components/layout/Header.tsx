@@ -62,6 +62,7 @@ export default function Header() {
         <nav className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 glass-panel rounded-full px-6 py-2.5 flex items-center gap-6 text-xs font-mono uppercase tracking-[0.1em]">
           <Link href="/" className="hover:text-accent-blue transition-colors">이력서</Link>
           <Link href="/projects" className="hover:text-accent-blue transition-colors">프로젝트</Link>
+          <Link href="/handbook" className="hover:text-accent-blue transition-colors">핸드북</Link>
           <Link href="/blog" className="hover:text-accent-blue transition-colors">블로그</Link>
 
           <button

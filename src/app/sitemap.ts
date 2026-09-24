@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllPosts, getLatestLastModified } from "@/lib/mdx";
+import { HANDBOOK_SECTIONS } from "@/lib/handbook";
 import { getAllVideos } from "@/lib/videos";
 import {
   formatDateForSitemap,
@@ -10,12 +11,14 @@ import {
 export default function sitemap(): MetadataRoute.Sitemap {
   const blogPosts = getAllPosts("blog").filter((post) => post.published);
   const projects = getAllPosts("projects").filter((project) => project.published);
+  const handbookPosts = getAllPosts("handbook").filter((post) => post.published);
   const latestSiteUpdate = getLatestLastModified(
-    [...blogPosts, ...projects, { lastModified: SITE_LAST_MODIFIED }],
+    [...blogPosts, ...projects, ...handbookPosts, { lastModified: SITE_LAST_MODIFIED }],
     SITE_LAST_MODIFIED,
   );
   const latestBlogUpdate = getLatestLastModified(blogPosts, SITE_LAST_MODIFIED);
   const latestProjectUpdate = getLatestLastModified(projects, SITE_LAST_MODIFIED);
+  const latestHandbookUpdate = getLatestLastModified(handbookPosts, SITE_LAST_MODIFIED);
 
   return [
     {
@@ -29,6 +32,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: new URL("/blog", SITE_URL).toString(),
       lastModified: latestBlogUpdate,
+    },
+    {
+      url: new URL("/handbook", SITE_URL).toString(),
+      lastModified: latestHandbookUpdate,
     },
     {
       url: new URL("/videos", SITE_URL).toString(),
@@ -48,6 +55,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     ...blogPosts.map((post) => ({
       url: new URL(`/blog/${post.slug}`, SITE_URL).toString(),
+      lastModified: formatDateForSitemap(post.lastModified) ?? SITE_LAST_MODIFIED,
+    })),
+    ...HANDBOOK_SECTIONS.map((section) => ({
+      url: new URL(`/handbook/${section.slug}`, SITE_URL).toString(),
+      lastModified: latestHandbookUpdate,
+    })),
+    ...handbookPosts.map((post) => ({
+      url: new URL(`/handbook/${post.slug}`, SITE_URL).toString(),
       lastModified: formatDateForSitemap(post.lastModified) ?? SITE_LAST_MODIFIED,
     })),
     ...getAllVideos().map((video) => ({
